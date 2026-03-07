@@ -1,0 +1,28 @@
+import { z } from 'zod'
+
+// ─── Esquemas de validación ───────────────────────────────────────────────────
+
+export const esquemaRegistro = z.object({
+  nombre:     z.string().min(2, 'El nombre debe tener al menos 2 caracteres').max(100),
+  correo:     z.string().email('El correo no es válido'),
+  contrasena: z
+    .string()
+    .min(8, 'La contraseña debe tener al menos 8 caracteres')
+    .regex(/[A-Z]/, 'Debe contener al menos una mayúscula')
+    .regex(/[0-9]/, 'Debe contener al menos un número'),
+})
+
+export const esquemaLogin = z.object({
+  correo:     z.string().email('El correo no es válido'),
+  contrasena: z.string().min(1, 'La contraseña es requerida'),
+})
+
+export const esquemaRefrescarToken = z.object({
+  tokenRefresco: z.string().min(1, 'El token de refresco es requerido'),
+})
+
+// ─── Tipos inferidos ──────────────────────────────────────────────────────────
+
+export type DatosRegistro       = z.infer<typeof esquemaRegistro>
+export type DatosLogin          = z.infer<typeof esquemaLogin>
+export type DatosRefrescarToken = z.infer<typeof esquemaRefrescarToken>

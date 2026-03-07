@@ -1,0 +1,147 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+model Usuario {
+  id            String       @id @default(uuid())
+  nombre        String
+  correo        String       @unique
+  contrasena    String
+  rol           RolUsuario   @default(CLIENTE)
+  telefono      String?
+  empresa       String?
+  activo        Boolean      @default(true)
+  creadoEn      DateTime     @default(now())
+  actualizadoEn DateTime     @updatedAt
+
+  prospectos   Prospecto[]
+  cotizaciones Cotizacion[]
+  testimonios  Testimonio[]
+
+  @@map("usuarios")
+}
+
+enum RolUsuario {
+  ADMIN
+  CLIENTE
+}
+
+enum EstadoProspecto {
+  NUEVO
+  CONTACTADO
+  CONVERTIDO
+  PERDIDO
+}
+
+enum TipoServicio {
+  LANDING
+  CORPORATIVO
+  ECOMMERCE
+  SAAS
+  MANTENIMIENTO
+}
+
+enum EstadoCotizacion {
+  PENDIENTE
+  ENVIADA
+  ACEPTADA
+  RECHAZADA
+}
+
+model Servicio {
+  id              String     @id @default(uuid())
+  nombre          String
+  slug            String     @unique
+  descripcion     String
+  precioDesde     Int
+  precioHasta     Int
+  semanasEntrega  Int
+  caracteristicas Json
+  activo          Boolean    @default(true)
+  creadoEn        DateTime   @default(now())
+
+  proyectos    Proyecto[]
+  cotizaciones Cotizacion[]
+
+  @@map("servicios")
+}
+
+model Prospecto {
+  id           String          @id @default(uuid())
+  nombre       String
+  correo       String
+  telefono     String?
+  tipoServicio TipoServicio
+  mensaje      String?
+  estado       EstadoProspecto @default(NUEVO)
+  presupuesto  Int?
+  fuente       String?
+  notas        String?
+  creadoEn     DateTime        @default(now())
+
+  usuarioId    String?
+  usuario      Usuario?    @relation(fields: [usuarioId], references: [id])
+  cotizaciones Cotizacion[]
+
+  @@map("prospectos")
+}
+
+model Proyecto {
+  id           String    @id @default(uuid())
+  titulo       String
+  slug         String    @unique
+  descripcion  String
+  stackTecnico Json
+  imagenUrl    String?
+  urlEnVivo    String?
+  urlGithub    String?
+  destacado    Boolean   @default(false)
+  creadoEn     DateTime  @default(now())
+
+  servicioId  String?
+  servicio    Servicio?   @relation(fields: [servicioId], references: [id])
+  testimonios Testimonio[]
+
+  @@map("proyectos")
+}
+
+model Cotizacion {
+  id          String           @id @default(uuid())
+  extras      Json
+  precioTotal Int
+  estado      EstadoCotizacion @default(PENDIENTE)
+  notas       String?
+  creadoEn    DateTime         @default(now())
+
+  prospectoId String
+  prospecto   Prospecto @relation(fields: [prospectoId], references: [id])
+  servicioId  String
+  servicio    Servicio  @relation(fields: [servicioId], references: [id])
+  usuarioId   String?
+  usuario     Usuario?  @relation(fields: [usuarioId], references: [id])
+
+  @@map("cotizaciones")
+}
+
+model Testimonio {
+  id            String   @id @default(uuid())
+  nombreCliente String
+  empresa       String?
+  contenido     String
+  calificacion  Int
+  visible       Boolean  @default(false)
+  creadoEn      DateTime @default(now())
+
+  proyectoId String?
+  proyecto   Proyecto? @relation(fields: [proyectoId], references: [id])
+  usuarioId  String?
+  usuario    Usuario?  @relation(fields: [usuarioId], references: [id])
+
+  @@map("testimonios")
+}
