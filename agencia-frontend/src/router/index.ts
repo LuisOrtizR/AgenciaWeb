@@ -58,6 +58,12 @@ const rutas: RouteRecordRaw[] = [
         component: () => import('@/views/publico/ContactoView.vue'),
         meta: { titulo: 'Contacto — Nexova Studio' },
       },
+      {
+        path:      'testimonios',
+        name:      'testimonios',
+        component: () => import('@/views/publico/TestimoniosView.vue'),
+        meta: { titulo: 'Testimonios — Nexova Studio' },
+      },
     ],
   },
 
@@ -160,7 +166,7 @@ const rutas: RouteRecordRaw[] = [
       {
         path:      'testimonios',
         name:      'admin-testimonios',
-        component: () => import('@/views/admin/TestimoniosView.vue'),
+        component: () => import('@/views/admin/Testimoniosadminview.vue'),
         meta: { titulo: 'Testimonios — Nexova Admin' },
       },
       {

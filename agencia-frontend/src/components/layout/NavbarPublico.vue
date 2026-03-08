@@ -15,6 +15,7 @@ const enlaces = [
   { nombre: 'Inicio',     ruta: { name: 'inicio' } },
   { nombre: 'Servicios',  ruta: { name: 'servicios' } },
   { nombre: 'Portafolio', ruta: { name: 'proyectos' } },
+  { nombre: 'Testimonios',  ruta: { name: 'testimonios' } },
   { nombre: 'Contacto',   ruta: { name: 'contacto' } },
 ]
 
@@ -23,6 +24,7 @@ const esActivo = (nombre: string) => {
     inicio:    ['inicio'],
     servicios: ['servicios', 'servicio-detalle'],
     proyectos: ['proyectos', 'proyecto-detalle'],
+    testimonios:  ['testimonios'],
     contacto:  ['contacto'],
   }
   return mapa[nombre.toLowerCase()]?.includes(route.name as string) ?? false

@@ -47,7 +47,8 @@ const moderar = async (t: Testimonio) => {
 }
 
 const eliminar = async (t: Testimonio) => {
-  if (!confirm(`¿Eliminar el testimonio de ${t.nombreCliente}?`)) return
+  // ✅ FIX: t.nombre en lugar de t.nombreCliente
+  if (!confirm(`¿Eliminar el testimonio de ${t.nombre}?`)) return
   try {
     await testimoniosServicio.eliminar(t.id)
     uiStore.exito('Testimonio eliminado')
@@ -104,7 +105,8 @@ const formatearFecha = (f: string) =>
         <!-- Header -->
         <div class="flex items-start justify-between mb-3">
           <div>
-            <p class="text-sm font-medium text-white">{{ t.nombreCliente }}</p>
+            <!-- ✅ FIX: t.nombre en lugar de t.nombreCliente -->
+            <p class="text-sm font-medium text-white">{{ t.nombre }}</p>
             <p v-if="t.empresa" class="text-xs text-gris-medio">{{ t.empresa }}</p>
             <p class="text-amarillo text-sm mt-1 tracking-widest">{{ estrellas(t.calificacion) }}</p>
           </div>
@@ -113,8 +115,8 @@ const formatearFecha = (f: string) =>
           </AppInsignia>
         </div>
 
-        <!-- Contenido -->
-        <p class="text-sm text-blanco-suave leading-relaxed line-clamp-3">{{ t.contenido }}</p>
+        <!-- ✅ FIX: t.texto en lugar de t.contenido -->
+        <p class="text-sm text-blanco-suave leading-relaxed line-clamp-3">{{ t.texto }}</p>
 
         <!-- Proyecto relacionado -->
         <p v-if="t.proyecto" class="text-xs text-gris-medio mt-2">

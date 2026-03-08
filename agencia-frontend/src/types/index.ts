@@ -337,16 +337,15 @@ export interface ResumenCotizaciones {
 // ─── Testimonio ───────────────────────────────────────────────────────────────
 
 export interface Testimonio {
-  id:         string
-  nombre:     string
-  empresa:    string | null
-  cargo:      string | null
-  texto:      string
-  calificacion: number
-  visible:    boolean
-  proyectoId: string | null
-  proyecto?:  Proyecto | null
-  creadoEn:   string
+  id:            string
+  nombreCliente: string   // ← no 'nombre'
+  empresa:       string | null
+  contenido:     string   // ← no 'texto'
+  calificacion:  number
+  visible:       boolean
+  proyectoId:    string | null
+  proyecto?:     { id: string; titulo: string; slug: string } | null
+  creadoEn:      string
   actualizadoEn: string
 }
 

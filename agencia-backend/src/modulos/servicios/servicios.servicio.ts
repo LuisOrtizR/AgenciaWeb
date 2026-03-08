@@ -1,13 +1,59 @@
 import prisma from '../../config/baseDatos.js'
 import { DatosCrearServicio, DatosActualizarServicio, FiltrosServicio } from './servicios.tipos.js'
 
-/**
- * Capa de lógica de negocio para servicios.
- */
+// ─── Caché de tasa USD/COP — se actualiza una vez al día ─────────────────────
 
-// ─── Listar activos con paginación y búsqueda (público) ───────────────────────
+let cacheTasa: { valor: number; fecha: string } | null = null
+
+export const obtenerTasaCOP_USD = async (): Promise<number> => {
+  const hoy = new Date().toISOString().slice(0, 10)
+
+  if (cacheTasa && cacheTasa.fecha === hoy) {
+    return cacheTasa.valor
+  }
+
+  try {
+    const resp = await fetch('https://open.er-api.com/v6/latest/USD')
+    const json = await resp.json() as { rates?: Record<string, number> }
+    const tasa = json.rates?.['COP']
+
+    if (!tasa) throw new Error('Tasa no disponible')
+
+    cacheTasa = { valor: tasa, fecha: hoy }
+    return tasa
+  } catch {
+    return cacheTasa?.valor ?? 4200
+  }
+}
+
+const copAUsd = (cop: number, tasa: number) =>
+  Math.round(cop / tasa)
+
+// ─── Orden helper ─────────────────────────────────────────────────────────────
+
+const ordenarPor = (orden: FiltrosServicio['orden']) => {
+  if (orden === 'precio_asc')  return { precioDesde: 'asc'  as const }
+  if (orden === 'precio_desc') return { precioDesde: 'desc' as const }
+  return { creadoEn: 'desc' as const }
+}
+
+// ─── Agregar precios en USD a cada servicio ───────────────────────────────────
+
+const agregarUsd = <T extends { precioDesde: number; precioHasta: number }>(
+  items: T[],
+  tasa: number
+): (T & { precioDesdeUsd: number; precioHastaUsd: number; tasaCOP_USD: number })[] =>
+  items.map(item => ({
+    ...item,
+    precioDesdeUsd: copAUsd(item.precioDesde, tasa),
+    precioHastaUsd: copAUsd(item.precioHasta, tasa),
+    tasaCOP_USD:    Math.round(tasa),
+  }))
+
+// ─── Listar activos (público) ─────────────────────────────────────────────────
+
 export const listarServicios = async (filtros: FiltrosServicio) => {
-  const { pagina, porPagina, busqueda } = filtros
+  const { pagina, porPagina, busqueda, orden } = filtros
 
   const donde = {
     activo: true,
@@ -19,10 +65,10 @@ export const listarServicios = async (filtros: FiltrosServicio) => {
     }),
   }
 
-  const [datos, total] = await Promise.all([
+  const [datos, total, tasa] = await Promise.all([
     prisma.servicio.findMany({
       where:   donde,
-      orderBy: { creadoEn: 'desc' },
+      orderBy: ordenarPor(orden),
       skip:    (pagina - 1) * porPagina,
       take:    porPagina,
       select: {
@@ -38,10 +84,11 @@ export const listarServicios = async (filtros: FiltrosServicio) => {
       },
     }),
     prisma.servicio.count({ where: donde }),
+    obtenerTasaCOP_USD(),
   ])
 
   return {
-    datos,
+    datos: agregarUsd(datos, tasa),
     paginacion: {
       paginaActual:   pagina,
       totalPaginas:   Math.ceil(total / porPagina),
@@ -51,9 +98,10 @@ export const listarServicios = async (filtros: FiltrosServicio) => {
   }
 }
 
-// ─── Listar todos con paginación (admin ve también inactivos) ─────────────────
+// ─── Listar todos (admin) ─────────────────────────────────────────────────────
+
 export const listarServiciosAdmin = async (filtros: FiltrosServicio) => {
-  const { pagina, porPagina, busqueda, activo } = filtros
+  const { pagina, porPagina, busqueda, activo, orden } = filtros
 
   const donde = {
     ...(activo !== undefined && { activo: activo === 'true' }),
@@ -65,18 +113,19 @@ export const listarServiciosAdmin = async (filtros: FiltrosServicio) => {
     }),
   }
 
-  const [datos, total] = await Promise.all([
+  const [datos, total, tasa] = await Promise.all([
     prisma.servicio.findMany({
       where:   donde,
-      orderBy: { creadoEn: 'desc' },
+      orderBy: ordenarPor(orden),
       skip:    (pagina - 1) * porPagina,
       take:    porPagina,
     }),
     prisma.servicio.count({ where: donde }),
+    obtenerTasaCOP_USD(),
   ])
 
   return {
-    datos,
+    datos: agregarUsd(datos, tasa),
     paginacion: {
       paginaActual:   pagina,
       totalPaginas:   Math.ceil(total / porPagina),
@@ -86,40 +135,44 @@ export const listarServiciosAdmin = async (filtros: FiltrosServicio) => {
   }
 }
 
-// ─── Obtener uno por slug (público) ──────────────────────────────────────────
+// ─── Obtener por slug (público) ───────────────────────────────────────────────
+
 export const obtenerServicioPorSlug = async (slug: string) => {
-  const servicio = await prisma.servicio.findUnique({ where: { slug } })
-  if (!servicio) throw new Error('Servicio no encontrado')
-  return servicio
+  const s = await prisma.servicio.findUnique({ where: { slug } })
+  if (!s) throw new Error('Servicio no encontrado')
+  const tasa = await obtenerTasaCOP_USD()
+  return {
+    ...s,
+    precioDesdeUsd: copAUsd(s.precioDesde, tasa),
+    precioHastaUsd: copAUsd(s.precioHasta, tasa),
+    tasaCOP_USD:    Math.round(tasa),
+  }
 }
 
-// ─── Obtener uno por id ───────────────────────────────────────────────────────
+// ─── Obtener por id (admin) ───────────────────────────────────────────────────
+
 export const obtenerServicioPorId = async (id: string) => {
-  const servicio = await prisma.servicio.findUnique({ where: { id } })
-  if (!servicio) throw new Error('Servicio no encontrado')
-  return servicio
+  const s = await prisma.servicio.findUnique({ where: { id } })
+  if (!s) throw new Error('Servicio no encontrado')
+  return s
 }
 
-// ─── Crear (solo ADMIN) ───────────────────────────────────────────────────────
+// ─── Crear ────────────────────────────────────────────────────────────────────
+
 export const crearServicio = async (datos: DatosCrearServicio) => {
   const existente = await prisma.servicio.findUnique({ where: { slug: datos.slug } })
   if (existente) throw new Error('Ya existe un servicio con ese slug')
-
-  if (datos.precioDesde > datos.precioHasta) {
-    throw new Error('El precio mínimo no puede ser mayor al precio máximo')
-  }
-
+  if (datos.precioDesde > datos.precioHasta) throw new Error('El precio mínimo no puede ser mayor al precio máximo')
   return prisma.servicio.create({ data: datos })
 }
 
-// ─── Actualizar (solo ADMIN) ──────────────────────────────────────────────────
+// ─── Actualizar ───────────────────────────────────────────────────────────────
+
 export const actualizarServicio = async (id: string, datos: DatosActualizarServicio) => {
   await obtenerServicioPorId(id)
 
   if (datos.slug) {
-    const existente = await prisma.servicio.findFirst({
-      where: { slug: datos.slug, NOT: { id } },
-    })
+    const existente = await prisma.servicio.findFirst({ where: { slug: datos.slug, NOT: { id } } })
     if (existente) throw new Error('Ya existe un servicio con ese slug')
   }
 
@@ -130,23 +183,23 @@ export const actualizarServicio = async (id: string, datos: DatosActualizarServi
   return prisma.servicio.update({ where: { id }, data: datos })
 }
 
-// ─── Desactivar — soft delete (solo ADMIN) ────────────────────────────────────
+// ─── Activar / Desactivar ─────────────────────────────────────────────────────
+
 export const desactivarServicio = async (id: string) => {
   await obtenerServicioPorId(id)
   return prisma.servicio.update({ where: { id }, data: { activo: false } })
 }
 
-// ─── Activar (solo ADMIN) ─────────────────────────────────────────────────────
 export const activarServicio = async (id: string) => {
   await obtenerServicioPorId(id)
   return prisma.servicio.update({ where: { id }, data: { activo: true } })
 }
 
-// ─── Eliminar permanente (solo ADMIN) ────────────────────────────────────────
-export const eliminarServicio = async (id: string) => {
-  const servicio = await obtenerServicioPorId(id)
+// ─── Eliminar ─────────────────────────────────────────────────────────────────
 
-  // Verificar que no tenga proyectos o cotizaciones asociadas
+export const eliminarServicio = async (id: string) => {
+  const s = await obtenerServicioPorId(id)
+
   const [proyectos, cotizaciones] = await Promise.all([
     prisma.proyecto.count({ where: { servicioId: id } }),
     prisma.cotizacion.count({ where: { servicioId: id } }),
@@ -157,5 +210,5 @@ export const eliminarServicio = async (id: string) => {
   }
 
   await prisma.servicio.delete({ where: { id } })
-  return servicio
+  return s
 }

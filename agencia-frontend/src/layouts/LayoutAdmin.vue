@@ -1,37 +1,18 @@
+<script setup lang="ts">
+import SidebarAdmin from '@/components/layout/SidebarAdmin.vue'
+import TopbarAdmin  from '@/components/layout/TopbarAdmin.vue'
+import SistemaToast from '@/components/ui/SistemaToast.vue'
+</script>
+
 <template>
-  <div class="layout-admin">
+  <div class="flex h-screen bg-[#0a0a0f] overflow-hidden">
     <SidebarAdmin />
-    <div class="admin-body">
+    <div class="flex flex-col flex-1 min-w-0 overflow-hidden">
       <TopbarAdmin />
-      <main class="admin-main">
+      <main class="flex-1 overflow-y-auto bg-[#0a0a0f] p-6 lg:p-8">
         <RouterView />
       </main>
     </div>
+    <SistemaToast />
   </div>
 </template>
-
-<script setup lang="ts">
-import SidebarAdmin from '@/components/layout/SidebarAdmin.vue'
-import TopbarAdmin from '@/components/layout/TopbarAdmin.vue'
-</script>
-
-<style scoped>
-.layout-admin {
-  display: flex;
-  min-height: 100vh;
-  background: #f8fafc;
-}
-
-.admin-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.admin-main {
-  flex: 1;
-  padding: 2rem;
-  overflow-y: auto;
-}
-</style>
