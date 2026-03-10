@@ -66,7 +66,7 @@ const guardarContrasena = async () => {
   try {
     await authStore.cambiarContrasena({
       contrasenaActual: formContrasena.contrasenaActual,
-      nuevaContrasena:  formContrasena.nuevaContrasena,
+      contrasenaNueva:  formContrasena.nuevaContrasena,
     })
     uiStore.exito('Contraseña actualizada')
     formContrasena.contrasenaActual = ''

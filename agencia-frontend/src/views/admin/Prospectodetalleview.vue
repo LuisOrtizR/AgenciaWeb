@@ -2,11 +2,11 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUiStore } from '@/stores/ui'
-import { prospectosServicio, iaServicio } from '@/services/servicios'
+import { prospectosServicio, iaServicio, usuariosServicio } from '@/services/servicios'
 import AppInsignia from '@/components/ui/AppInsignia.vue'
 import AppBoton   from '@/components/ui/AppBoton.vue'
 import AppModal   from '@/components/ui/AppModal.vue'
-import type { Prospecto, EstadoProspecto, DatosActualizarEstadoProspecto } from '@/types'
+import type { Prospecto, EstadoProspecto, DatosActualizarEstadoProspecto, UsuarioConConteo } from '@/types'
 
 const route   = useRoute()
 const router  = useRouter()
@@ -18,8 +18,16 @@ const cargandoIA     = ref(false)
 const modalEstado    = ref(false)
 const modalAnalisis  = ref(false)
 const modalPropuesta = ref(false)
+const modalAsignar   = ref(false)
 const resultadoIA    = ref('')
 const propuestaIA    = ref('')
+
+// ─── Asignar usuario ──────────────────────────────────────────────────────────
+const usuarios          = ref<UsuarioConConteo[]>([])
+const cargandoUsuarios  = ref(false)
+const busquedaUsuario   = ref('')
+const usuarioSelecId    = ref<string | null>(null)
+const guardandoAsignar  = ref(false)
 
 const formularioEstado = ref<DatosActualizarEstadoProspecto>({
   estado: 'NUEVO',
@@ -114,6 +122,52 @@ const cambioRapidoEstado = async (estado: EstadoProspecto) => {
   }
 }
 
+// ─── Asignar usuario ──────────────────────────────────────────────────────────
+const abrirModalAsignar = async () => {
+  usuarioSelecId.value = prospecto.value?.usuarioId ?? null
+  busquedaUsuario.value = ''
+  modalAsignar.value = true
+  cargandoUsuarios.value = true
+  try {
+    const { data } = await usuariosServicio.listar({ porPagina: 100, rol: 'CLIENTE' })
+    usuarios.value = data.datos
+  } catch {
+    uiStore.error('Error', 'No se pudieron cargar los usuarios')
+  } finally {
+    cargandoUsuarios.value = false
+  }
+}
+
+const usuariosFiltrados = () => {
+  if (!busquedaUsuario.value.trim()) return usuarios.value
+  const q = busquedaUsuario.value.toLowerCase()
+  return usuarios.value.filter(u =>
+    u.nombre.toLowerCase().includes(q) || u.correo.toLowerCase().includes(q)
+  )
+}
+
+const guardarAsignacion = async () => {
+  if (!prospecto.value) return
+  guardandoAsignar.value = true
+  try {
+    await prospectosServicio.asignar(prospecto.value.id, usuarioSelecId.value)
+    const usuario = usuarios.value.find(u => u.id === usuarioSelecId.value)
+    uiStore.exito(
+      usuarioSelecId.value ? 'Usuario asignado' : 'Asignación removida',
+      usuarioSelecId.value
+        ? `${usuario?.nombre} ahora verá las cotizaciones de este prospecto`
+        : 'El prospecto quedó sin usuario asignado'
+    )
+    modalAsignar.value = false
+    cargar()
+  } catch {
+    uiStore.error('Error', 'No se pudo asignar el usuario')
+  } finally {
+    guardandoAsignar.value = false
+  }
+}
+
+// ─── IA ───────────────────────────────────────────────────────────────────────
 const analizarConIA = async () => {
   if (!prospecto.value) return
   resultadoIA.value   = ''
@@ -208,7 +262,7 @@ const eliminar = async () => {
 
       <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div class="flex items-start gap-4">
-          <div class="w-14 h-14 rounded-2xl bg-linear-to-brrom-violeta/30 to-indigo-500/20 flex items-center justify-center text-2xl font-black text-violeta-claro shrink-0">
+          <div class="w-14 h-14 rounded-2xl bg-linear-to-br from-violeta/30 to-indigo-500/20 flex items-center justify-center text-2xl font-black text-violeta-claro shrink-0">
             {{ inicialNombre(prospecto.nombre) }}
           </div>
           <div>
@@ -250,6 +304,7 @@ const eliminar = async () => {
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
+        <!-- Columna principal -->
         <div class="lg:col-span-2 space-y-5">
 
           <div class="bg-[#13151f] border border-white/5 rounded-2xl p-5 space-y-4">
@@ -326,6 +381,7 @@ const eliminar = async () => {
           </div>
         </div>
 
+        <!-- Columna derecha -->
         <div class="space-y-5">
 
           <div class="bg-[#13151f] border border-white/5 rounded-2xl p-5 space-y-3">
@@ -352,6 +408,57 @@ const eliminar = async () => {
                 <svg v-if="prospecto.estado === estado" class="w-3.5 h-3.5 ml-auto text-violeta-claro" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
                 </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- ── Asignado a — con botón de asignar ──────────────────────── -->
+          <div class="bg-[#13151f] border border-white/5 rounded-2xl p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-semibold text-white">Asignado a</h2>
+              <button
+                class="inline-flex items-center gap-1 text-xs text-violeta-claro hover:text-violeta transition-colors"
+                @click="abrirModalAsignar"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                {{ prospecto.usuario ? 'Cambiar' : 'Asignar' }}
+              </button>
+            </div>
+
+            <!-- Usuario asignado -->
+            <div v-if="prospecto.usuario" class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-linear-to-br from-violeta/30 to-indigo-500/20 flex items-center justify-center text-xs font-bold text-violeta-claro shrink-0">
+                {{ inicialNombre(prospecto.usuario.nombre) }}
+              </div>
+              <div>
+                <p class="text-sm font-medium text-white">{{ prospecto.usuario.nombre }}</p>
+                <p class="text-xs text-gris-medio">{{ prospecto.usuario.correo }}</p>
+              </div>
+            </div>
+
+            <!-- Sin asignar — con aviso llamativo -->
+            <div v-else>
+              <div class="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <svg class="w-4 h-4 text-amber-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div>
+                  <p class="text-xs font-semibold text-amber-300">Sin usuario vinculado</p>
+                  <p class="text-xs text-amber-400/70 mt-0.5 leading-relaxed">
+                    El cliente no verá sus cotizaciones en el panel hasta que lo asignes.
+                  </p>
+                </div>
+              </div>
+              <button
+                class="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-violeta/20 hover:bg-violeta/30 border border-violeta/30 text-violeta-claro text-sm font-medium transition-all"
+                @click="abrirModalAsignar"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                Vincular a un usuario
               </button>
             </div>
           </div>
@@ -383,20 +490,6 @@ const eliminar = async () => {
             </button>
           </div>
 
-          <div class="bg-[#13151f] border border-white/5 rounded-2xl p-5">
-            <h2 class="text-sm font-semibold text-white mb-3">Asignado a</h2>
-            <div v-if="prospecto.usuario" class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-full bg-linear-to-br from-violeta/30 to-indigo-500/20 flex items-center justify-center text-xs font-bold text-violeta-claro">
-                {{ inicialNombre(prospecto.usuario.nombre) }}
-              </div>
-              <div>
-                <p class="text-sm font-medium text-white">{{ prospecto.usuario.nombre }}</p>
-                <p class="text-xs text-gris-medio">{{ prospecto.usuario.correo }}</p>
-              </div>
-            </div>
-            <p v-else class="text-sm text-gris-medio">Sin asignar</p>
-          </div>
-
           <div class="bg-[#13151f] border border-white/5 rounded-2xl p-5 space-y-3 text-xs text-gris-medio">
             <div class="flex justify-between">
               <span>Registrado</span>
@@ -407,6 +500,7 @@ const eliminar = async () => {
       </div>
     </template>
 
+    <!-- ── Modal: Cambiar estado ──────────────────────────────────────────── -->
     <AppModal :abierto="modalEstado" titulo="Cambiar estado" tamano="sm" @cerrar="modalEstado = false">
       <div class="space-y-4">
         <div class="space-y-1.5">
@@ -426,9 +520,111 @@ const eliminar = async () => {
       </template>
     </AppModal>
 
+    <!-- ── Modal: Asignar usuario ─────────────────────────────────────────── -->
+    <AppModal :abierto="modalAsignar" titulo="Vincular prospecto a usuario" tamano="sm" @cerrar="modalAsignar = false">
+      <div class="space-y-4">
+
+        <!-- Info del prospecto -->
+        <div v-if="prospecto" class="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
+          <div class="w-9 h-9 rounded-full bg-violeta/20 flex items-center justify-center text-sm font-bold text-violeta-claro shrink-0">
+            {{ inicialNombre(prospecto.nombre) }}
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-white">{{ prospecto.nombre }}</p>
+            <p class="text-xs text-gris-medio">{{ prospecto.correo }}</p>
+          </div>
+        </div>
+
+        <!-- Aviso explicativo -->
+        <div class="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 leading-relaxed">
+          <svg class="w-3.5 h-3.5 inline mr-1 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Al vincular, el usuario podrá ver y responder las cotizaciones de este prospecto desde su panel de cliente.
+        </div>
+
+        <!-- Buscador -->
+        <div class="relative">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gris-medio pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            v-model="busquedaUsuario"
+            type="search"
+            placeholder="Buscar usuario por nombre o correo..."
+            class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-violeta/50 text-white placeholder-gris-medio text-sm outline-none transition-all"
+          />
+        </div>
+
+        <!-- Lista de usuarios -->
+        <div class="max-h-60 overflow-y-auto space-y-1.5 pr-1">
+          <div v-if="cargandoUsuarios" class="space-y-2">
+            <div v-for="i in 4" :key="i" class="h-12 bg-white/5 rounded-xl animate-pulse" />
+          </div>
+          <template v-else>
+            <!-- Opción: sin usuario -->
+            <button
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all border"
+              :class="usuarioSelecId === null
+                ? 'bg-red-500/10 border-red-500/20 text-red-300'
+                : 'border-transparent text-gris-medio hover:text-white hover:bg-white/5'"
+              @click="usuarioSelecId = null"
+            >
+              <div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+              </div>
+              <span class="font-medium">Sin asignar</span>
+              <svg v-if="usuarioSelecId === null" class="w-4 h-4 ml-auto text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+              </svg>
+            </button>
+
+            <!-- Lista de usuarios -->
+            <button
+              v-for="u in usuariosFiltrados()"
+              :key="u.id"
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all border"
+              :class="usuarioSelecId === u.id
+                ? 'bg-violeta/20 border-violeta/30 text-violeta-claro'
+                : 'border-transparent text-gris-medio hover:text-white hover:bg-white/5'"
+              @click="usuarioSelecId = u.id"
+            >
+              <div class="w-8 h-8 rounded-full bg-violeta/15 flex items-center justify-center text-xs font-bold text-violeta-claro shrink-0">
+                {{ inicialNombre(u.nombre) }}
+              </div>
+              <div class="flex-1 min-w-0 text-left">
+                <p class="font-medium truncate">{{ u.nombre }}</p>
+                <p class="text-xs opacity-70 truncate">{{ u.correo }}</p>
+              </div>
+              <svg v-if="usuarioSelecId === u.id" class="w-4 h-4 ml-auto text-violeta-claro shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+              </svg>
+            </button>
+
+            <p v-if="!cargandoUsuarios && !usuariosFiltrados().length" class="text-center text-sm text-gris-medio py-4">
+              No se encontraron usuarios
+            </p>
+          </template>
+        </div>
+      </div>
+
+      <template #footer>
+        <AppBoton variante="fantasma" @click="modalAsignar = false">Cancelar</AppBoton>
+        <AppBoton variante="primario" :cargando="guardandoAsignar" @click="guardarAsignacion">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          Confirmar vinculación
+        </AppBoton>
+      </template>
+    </AppModal>
+
+    <!-- ── Modal: Análisis IA ──────────────────────────────────────────────── -->
     <AppModal :abierto="modalAnalisis" titulo="🤖 Análisis IA del prospecto" tamano="md" @cerrar="modalAnalisis = false">
       <div v-if="prospecto" class="flex items-center gap-3 mb-5 pb-4 border-b border-white/5">
-        <div class="w-10 h-10 rounded-full bg-linear-to-brrom-violeta/30 to-indigo-500/20 flex items-center justify-center text-sm font-bold text-violeta-claro shrink-0">
+        <div class="w-10 h-10 rounded-full bg-linear-to-br from-violeta/30 to-indigo-500/20 flex items-center justify-center text-sm font-bold text-violeta-claro shrink-0">
           {{ inicialNombre(prospecto.nombre) }}
         </div>
         <div>
@@ -453,6 +649,7 @@ const eliminar = async () => {
       </template>
     </AppModal>
 
+    <!-- ── Modal: Propuesta IA ─────────────────────────────────────────────── -->
     <AppModal :abierto="modalPropuesta" titulo="📄 Propuesta comercial con IA" tamano="lg" @cerrar="modalPropuesta = false">
       <div v-if="prospecto" class="flex items-center gap-3 mb-5 pb-4 border-b border-white/5">
         <div class="w-10 h-10 rounded-full bg-linear-to-br from-verde/20 to-emerald-500/10 flex items-center justify-center text-sm font-bold text-verde shrink-0">

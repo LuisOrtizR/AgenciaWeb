@@ -1,25 +1,19 @@
 import winston from 'winston'
-import entorno from '../config/entorno.js'
+import entorno  from '../config/entorno.js'
 
-/**
- * Logger centralizado con Winston.
- * En producción: solo warn/error en JSON.
- * En desarrollo: todo en consola con colores.
- */
+const { combine, timestamp, json, colorize, printf } = winston.format
+
+const formatoProduccion = combine(timestamp(), json())
+
+const formatoDesarrollo = combine(
+  colorize(),
+  timestamp({ format: 'HH:mm:ss' }),
+  printf(({ level, message, timestamp }) => `[${timestamp}] ${level}: ${message}`)
+)
+
 const logger = winston.createLogger({
-  level: entorno.esProduccion ? 'warn' : 'debug',
-  format: entorno.esProduccion
-    ? winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-      )
-    : winston.format.combine(
-        winston.format.colorize(),
-        winston.format.timestamp({ format: 'HH:mm:ss' }),
-        winston.format.printf(
-          ({ level, message, timestamp }) => `[${timestamp}] ${level}: ${message}`
-        )
-      ),
+  level:      entorno.esProduccion ? 'warn' : 'debug',
+  format:     entorno.esProduccion ? formatoProduccion : formatoDesarrollo,
   transports: [new winston.transports.Console()],
 })
 

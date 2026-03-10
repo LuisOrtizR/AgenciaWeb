@@ -2,15 +2,8 @@ import { Response, NextFunction } from 'express'
 import { respuestaError }         from '../utilidades/respuesta.js'
 import { SolicitudAutenticada }   from '../tipos.js'
 
-/**
- * Middleware de autorización por rol.
- * Úsalo después de requerirAutenticacion.
- *
- * Ejemplo:
- *   router.get('/ruta', requerirAutenticacion, requerirRol('ADMIN'), controlador)
- */
-export const requerirRol = (...rolesPermitidos: string[]) => {
-  return (req: SolicitudAutenticada, res: Response, next: NextFunction): void => {
+export const requerirRol = (...rolesPermitidos: string[]) =>
+  (req: SolicitudAutenticada, res: Response, next: NextFunction): void => {
     const rol = req.usuario?.rol
 
     if (!rol) {
@@ -29,4 +22,3 @@ export const requerirRol = (...rolesPermitidos: string[]) => {
 
     next()
   }
-}

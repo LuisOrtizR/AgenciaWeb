@@ -7,95 +7,108 @@ import {
 } from './servicios.tipos.js'
 import * as servicio from './servicios.servicio.js'
 
+const manejarError = (res: Response, error: unknown, codigoDefecto = 400): void => {
+  const mensaje = error instanceof Error ? error.message : 'Error inesperado'
+  const codigo  =
+    mensaje.includes('no encontrado') ? 404 :
+    mensaje.includes('Ya existe')     ? 409 :
+    codigoDefecto
+  respuestaError(res, mensaje, codigo)
+}
+
+const parsearFiltros = (req: Request, res: Response) => {
+  const resultado = esquemaFiltrosServicio.safeParse(req.query)
+  if (!resultado.success) {
+    respuestaError(res, 'Parametros de filtro invalidos', 400, resultado.error.flatten().fieldErrors)
+    return null
+  }
+  return resultado.data
+}
+
 export const listar = async (req: Request, res: Response): Promise<void> => {
-  const filtros = esquemaFiltrosServicio.parse(req.query)
+  const filtros = parsearFiltros(req, res)
+  if (!filtros) return
   try {
     const { datos, paginacion } = await servicio.listarServicios(filtros)
     respuestaPaginada(res, datos, paginacion)
   } catch (error) {
-    respuestaError(res, error instanceof Error ? error.message : 'Error al listar servicios', 500)
+    manejarError(res, error, 500)
   }
 }
 
 export const listarAdmin = async (req: Request, res: Response): Promise<void> => {
-  const filtros = esquemaFiltrosServicio.parse(req.query)
+  const filtros = parsearFiltros(req, res)
+  if (!filtros) return
   try {
     const { datos, paginacion } = await servicio.listarServiciosAdmin(filtros)
     respuestaPaginada(res, datos, paginacion)
   } catch (error) {
-    respuestaError(res, error instanceof Error ? error.message : 'Error al listar servicios', 500)
+    manejarError(res, error, 500)
   }
 }
 
 export const obtenerPorSlug = async (req: Request, res: Response): Promise<void> => {
   try {
-    const datos = await servicio.obtenerServicioPorSlug(req.params['slug'] as string)
-    respuestaExito(res, datos)
+    respuestaExito(res, await servicio.obtenerServicioPorSlug(req.params['slug']))
   } catch (error) {
-    respuestaError(res, error instanceof Error ? error.message : 'Servicio no encontrado', 404)
+    manejarError(res, error, 404)
   }
 }
 
 export const obtenerPorId = async (req: Request, res: Response): Promise<void> => {
   try {
-    const datos = await servicio.obtenerServicioPorId(req.params['id'] as string)
-    respuestaExito(res, datos)
+    respuestaExito(res, await servicio.obtenerServicioPorId(req.params['id']))
   } catch (error) {
-    respuestaError(res, error instanceof Error ? error.message : 'Servicio no encontrado', 404)
+    manejarError(res, error, 404)
   }
 }
 
 export const crear = async (req: Request, res: Response): Promise<void> => {
   const resultado = esquemaCrearServicio.safeParse(req.body)
   if (!resultado.success) {
-    respuestaError(res, 'Datos inválidos', 400, resultado.error.flatten().fieldErrors)
+    respuestaError(res, 'Datos invalidos', 400, resultado.error.flatten().fieldErrors)
     return
   }
   try {
-    const datos = await servicio.crearServicio(resultado.data)
-    respuestaExito(res, datos, 'Servicio creado exitosamente', 201)
+    respuestaExito(res, await servicio.crearServicio(resultado.data), 'Servicio creado correctamente', 201)
   } catch (error) {
-    respuestaError(res, error instanceof Error ? error.message : 'Error al crear servicio', 400)
+    manejarError(res, error)
   }
 }
 
 export const actualizar = async (req: Request, res: Response): Promise<void> => {
   const resultado = esquemaActualizarServicio.safeParse(req.body)
   if (!resultado.success) {
-    respuestaError(res, 'Datos inválidos', 400, resultado.error.flatten().fieldErrors)
+    respuestaError(res, 'Datos invalidos', 400, resultado.error.flatten().fieldErrors)
     return
   }
   try {
-    const datos = await servicio.actualizarServicio(req.params['id'] as string, resultado.data)
-    respuestaExito(res, datos, 'Servicio actualizado exitosamente')
+    respuestaExito(res, await servicio.actualizarServicio(req.params['id'], resultado.data), 'Servicio actualizado correctamente')
   } catch (error) {
-    respuestaError(res, error instanceof Error ? error.message : 'Error al actualizar servicio', 400)
+    manejarError(res, error)
   }
 }
 
 export const activar = async (req: Request, res: Response): Promise<void> => {
   try {
-    const datos = await servicio.activarServicio(req.params['id'] as string)
-    respuestaExito(res, datos, 'Servicio activado exitosamente')
+    respuestaExito(res, await servicio.activarServicio(req.params['id']), 'Servicio activado correctamente')
   } catch (error) {
-    respuestaError(res, error instanceof Error ? error.message : 'Error al activar servicio', 400)
+    manejarError(res, error)
   }
 }
 
 export const desactivar = async (req: Request, res: Response): Promise<void> => {
   try {
-    const datos = await servicio.desactivarServicio(req.params['id'] as string)
-    respuestaExito(res, datos, 'Servicio desactivado exitosamente')
+    respuestaExito(res, await servicio.desactivarServicio(req.params['id']), 'Servicio desactivado correctamente')
   } catch (error) {
-    respuestaError(res, error instanceof Error ? error.message : 'Error al desactivar servicio', 400)
+    manejarError(res, error)
   }
 }
 
 export const eliminar = async (req: Request, res: Response): Promise<void> => {
   try {
-    const datos = await servicio.eliminarServicio(req.params['id'] as string)
-    respuestaExito(res, datos, 'Servicio eliminado permanentemente')
+    respuestaExito(res, await servicio.eliminarServicio(req.params['id']), 'Servicio eliminado permanentemente')
   } catch (error) {
-    respuestaError(res, error instanceof Error ? error.message : 'Error al eliminar servicio', 400)
+    manejarError(res, error)
   }
 }

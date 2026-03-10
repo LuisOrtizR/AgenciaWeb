@@ -150,6 +150,7 @@ export const misCotizaciones = async (req: Request, res: Response): Promise<void
 }
 
 // PATCH /api/cotizaciones/:id/responder
+// PATCH /api/cotizaciones/:id/responder
 export const responderCotizacion = async (req: Request, res: Response): Promise<void> => {
   const solicitud  = req as SolicitudAutenticada
   const id         = req.params['id'] as string
@@ -161,7 +162,12 @@ export const responderCotizacion = async (req: Request, res: Response): Promise<
   }
 
   try {
-    const datos = await servicio.responderCotizacion(id, solicitud.usuario!.correo, estado)
+    const datos = await servicio.responderCotizacion(
+      id,
+      solicitud.usuario!.correo,
+      estado,
+      solicitud.usuario!.id      // ← pasar también el usuarioId
+    )
     respuestaExito(res, datos, `Cotización ${estado.toLowerCase()} exitosamente`)
   } catch (error) {
     const mensaje = error instanceof Error ? error.message : 'Error al responder cotización'

@@ -10,11 +10,6 @@ import {
 } from './autenticacion.tipos.js'
 import * as servicio from './autenticacion.servicio.js'
 
-/**
- * Controladores del módulo de autenticación.
- */
-
-// POST /api/autenticacion/registrar
 export const registrar = async (req: Request, res: Response): Promise<void> => {
   const resultado = esquemaRegistro.safeParse(req.body)
   if (!resultado.success) {
@@ -30,7 +25,6 @@ export const registrar = async (req: Request, res: Response): Promise<void> => {
   }
 }
 
-// POST /api/autenticacion/login
 export const login = async (req: Request, res: Response): Promise<void> => {
   const resultado = esquemaLogin.safeParse(req.body)
   if (!resultado.success) {
@@ -46,7 +40,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   }
 }
 
-// GET /api/autenticacion/perfil  (requiere auth)
 export const perfil = async (req: Request, res: Response): Promise<void> => {
   const solicitud = req as SolicitudAutenticada
   const usuarioId = solicitud.usuario!.id
@@ -59,7 +52,6 @@ export const perfil = async (req: Request, res: Response): Promise<void> => {
   }
 }
 
-// POST /api/autenticacion/refrescar
 export const refrescarToken = async (req: Request, res: Response): Promise<void> => {
   const resultado = esquemaRefrescarToken.safeParse(req.body)
   if (!resultado.success) {
@@ -75,8 +67,6 @@ export const refrescarToken = async (req: Request, res: Response): Promise<void>
   }
 }
 
-// POST /api/autenticacion/olvide-contrasena
-// Solicita el envío del correo con el enlace de reset
 export const olvidéContrasena = async (req: Request, res: Response): Promise<void> => {
   const resultado = esquemaSolicitarReset.safeParse(req.body)
   if (!resultado.success) {
@@ -85,7 +75,6 @@ export const olvidéContrasena = async (req: Request, res: Response): Promise<vo
   }
   try {
     const datos = await servicio.solicitarReset(resultado.data)
-    // Siempre 200 para no revelar si el correo existe
     respuestaExito(res, datos, datos.mensaje)
   } catch (error) {
     const mensaje = error instanceof Error ? error.message : 'Error al procesar solicitud'
@@ -93,8 +82,6 @@ export const olvidéContrasena = async (req: Request, res: Response): Promise<vo
   }
 }
 
-// POST /api/autenticacion/reset-contrasena
-// Recibe el token (query/body) y la nueva contraseña
 export const resetContrasena = async (req: Request, res: Response): Promise<void> => {
   const resultado = esquemaResetearContrasena.safeParse(req.body)
   if (!resultado.success) {

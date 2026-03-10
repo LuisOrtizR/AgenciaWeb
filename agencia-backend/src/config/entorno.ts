@@ -13,6 +13,7 @@ const opcional = (nombre: string, porDefecto = ''): string =>
 const entorno = {
   PUERTO:  parseInt(opcional('PUERTO', '3001')),
   ENTORNO: opcional('NODE_ENV', 'development'),
+
   get esProduccion() { return this.ENTORNO === 'production' },
 
   URL_FRONTEND: opcional('URL_FRONTEND', 'http://localhost:5173'),

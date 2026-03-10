@@ -2,102 +2,98 @@ import { Response }             from 'express'
 import { SolicitudAutenticada } from '../../tipos.js'
 import { respuestaExito, respuestaError } from '../../utilidades/respuesta.js'
 import { subirImagen, eliminarImagen, extraerPublicId, CARPETAS } from '../../config/cloudinary.js'
+import logger from '../../utilidades/logger.js'
 import prisma from '../../config/baseDatos.js'
 
-/**
- * Controladores de imágenes — solo ADMIN.
- *
- * POST   /api/imagenes/proyectos/:id  → sube imagen y guarda URL en el proyecto
- * DELETE /api/imagenes/proyectos/:id  → elimina imagen de Cloudinary y limpia BD
- */
+const buscarProyecto = async (id: string, res: Response) => {
+  const proyecto = await prisma.proyecto.findUnique({
+    where:  { id },
+    select: { id: true, titulo: true, slug: true, imagenUrl: true },
+  })
+  if (!proyecto) {
+    respuestaError(res, 'Proyecto no encontrado', 404)
+    return null
+  }
+  return proyecto
+}
 
-// POST /api/imagenes/proyectos/:id
-// Body: multipart/form-data con campo "imagen"
+const limpiarImagenAnterior = async (imagenUrl: string | null): Promise<void> => {
+  if (!imagenUrl) return
+  const publicId = extraerPublicId(imagenUrl)
+  if (publicId) await eliminarImagen(publicId)
+}
+
 export const subirImagenProyecto = async (
   req: SolicitudAutenticada,
   res: Response
 ): Promise<void> => {
   try {
-    const id      = req.params['id'] as string
-    const archivo = req.file
+    const { id } = req.params
 
-    if (!archivo) {
-      respuestaError(res, 'No se recibió ningún archivo. Envía el campo "imagen".', 400)
+    if (!req.file) {
+      respuestaError(res, 'No se recibio ningun archivo. Envía el campo "imagen".', 400)
       return
     }
 
-    const proyecto = await prisma.proyecto.findUnique({
-      where:  { id },
-      select: { id: true, titulo: true, slug: true, imagenUrl: true },
-    })
-    if (!proyecto) {
-      respuestaError(res, 'Proyecto no encontrado', 404)
-      return
-    }
+    const proyecto = await buscarProyecto(id, res)
+    if (!proyecto) return
 
-    // Si ya tenía imagen → eliminarla de Cloudinary antes de subir la nueva
-    if (proyecto.imagenUrl) {
-      const publicIdAnterior = extraerPublicId(proyecto.imagenUrl)
-      if (publicIdAnterior) await eliminarImagen(publicIdAnterior)
-    }
+    await limpiarImagenAnterior(proyecto.imagenUrl)
 
-    // Subir nueva imagen — nombre de archivo = slug del proyecto
     const { url, publicId } = await subirImagen(
-      archivo.buffer,
+      req.file.buffer,
       CARPETAS.proyectos,
       proyecto.slug
     )
 
-    // Guardar URL en la BD
     const proyectoActualizado = await prisma.proyecto.update({
       where:  { id },
       data:   { imagenUrl: url },
       select: { id: true, titulo: true, slug: true, imagenUrl: true },
     })
 
-    respuestaExito(res, { ...proyectoActualizado, publicId }, 'Imagen subida exitosamente')
+    logger.info(`[Imagenes] Imagen subida para proyecto "${proyecto.slug}" por usuario ${req.usuario?.id}`)
+
+    respuestaExito(
+      res,
+      { ...proyectoActualizado, publicId },
+      'Imagen subida exitosamente',
+      201
+    )
   } catch (error) {
-    const mensaje = error instanceof Error ? error.message : 'Error al subir imagen'
-    respuestaError(res, mensaje, 500)
+    logger.error(`[Imagenes] Error al subir imagen: ${error instanceof Error ? error.message : error}`)
+    respuestaError(res, 'Error interno al subir la imagen', 500)
   }
 }
 
-// DELETE /api/imagenes/proyectos/:id
+
 export const eliminarImagenProyecto = async (
   req: SolicitudAutenticada,
   res: Response
 ): Promise<void> => {
   try {
-    const id = req.params['id'] as string
+    const { id } = req.params
 
-    const proyecto = await prisma.proyecto.findUnique({
-      where:  { id },
-      select: { id: true, titulo: true, imagenUrl: true },
-    })
-
-    if (!proyecto) {
-      respuestaError(res, 'Proyecto no encontrado', 404)
-      return
-    }
+    const proyecto = await buscarProyecto(id, res)
+    if (!proyecto) return
 
     if (!proyecto.imagenUrl) {
-      respuestaError(res, 'Este proyecto no tiene imagen que eliminar', 400)
+      respuestaError(res, 'Este proyecto no tiene imagen que eliminar', 409)
       return
     }
 
-    // Eliminar de Cloudinary
     const publicId = extraerPublicId(proyecto.imagenUrl)
-    if (publicId) await eliminarImagen(publicId)
 
-    // Limpiar URL en la BD
-    await prisma.proyecto.update({
-      where: { id },
-      data:  { imagenUrl: null },
-    })
+    await Promise.all([
+      publicId ? eliminarImagen(publicId) : Promise.resolve(),
+      prisma.proyecto.update({ where: { id }, data: { imagenUrl: null } }),
+    ])
+
+    logger.info(`[Imagenes] Imagen eliminada del proyecto "${proyecto.titulo}" por usuario ${req.usuario?.id}`)
 
     respuestaExito(res, { id, titulo: proyecto.titulo }, 'Imagen eliminada exitosamente')
   } catch (error) {
-    const mensaje = error instanceof Error ? error.message : 'Error al eliminar imagen'
-    respuestaError(res, mensaje, 500)
+    logger.error(`[Imagenes] Error al eliminar imagen: ${error instanceof Error ? error.message : error}`)
+    respuestaError(res, 'Error interno al eliminar la imagen', 500)
   }
 }

@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIWeb Creator — Guía del Backend</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a14; color: #e2e8f0; font-family: 'Segoe UI', system-ui, sans-serif; padding: 28px 20px; min-height: 100vh; }
+  h1 { font-size: 28px; font-weight: 800; background: linear-gradient(135deg,#818cf8,#c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  h2 { color: #c084fc; font-size: 20px; margin-bottom: 18px; }
+  .header { text-align: center; margin-bottom: 32px; }
+  .subtitle { color: #6366f1; font-size: 11px; letter-spacing: 4px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
+  .base-url { color: #64748b; font-size: 14px; margin-top: 8px; }
+  .base-url code { color: #818cf8; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 28px; flex-wrap: wrap; justify-content: center; }
+  .tab { padding: 8px 16px; border-radius: 30px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; background: #1a1a2e; color: #94a3b8; transition: all 0.2s; }
+  .tab.active { background: linear-gradient(135deg,#4f46e5,#7c3aed); color: #fff; box-shadow: 0 4px 12px #4f46e544; }
+  .content { max-width: 860px; margin: 0 auto; }
+  .section { display: none; }
+  .section.active { display: block; }
+  .card { background: #1a1a2e; border: 1px solid #2d2d4e; border-radius: 14px; padding: 20px; margin-bottom: 14px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid2-sm { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .endpoint { display: flex; align-items: flex-start; gap: 8px; padding: 7px 10px; background: #0d0d1a; border-radius: 8px; margin-bottom: 5px; }
+  .endpoint code { color: #e2e8f0; font-size: 13px; }
+  .endpoint .desc { color: #64748b; font-size: 12px; margin-top: 2px; }
+  .method { border-radius: 5px; padding: 1px 8px; font-size: 11px; font-weight: 700; font-family: monospace; margin-right: 0; white-space: nowrap; }
+  .GET { background:#22c55e22; color:#22c55e; border:1px solid #22c55e44; }
+  .POST { background:#3b82f622; color:#3b82f6; border:1px solid #3b82f644; }
+  .PUT { background:#f59e0b22; color:#f59e0b; border:1px solid #f59e0b44; }
+  .PATCH { background:#8b5cf622; color:#8b5cf6; border:1px solid #8b5cf644; }
+  .DELETE { background:#ef444422; color:#ef4444; border:1px solid #ef444444; }
+  .badge { border-radius: 6px; padding: 2px 10px; font-size: 12px; font-weight: 700; font-family: monospace; display: inline-block; margin: 2px; }
+  .badge-green { background:#d1fae5;color:#065f46;border:1px solid #6ee7b7; }
+  .badge-blue { background:#dbeafe;color:#1e40af;border:1px solid #93c5fd; }
+  .badge-purple { background:#ede9fe;color:#5b21b6;border:1px solid #c4b5fd; }
+  .badge-orange { background:#ffedd5;color:#9a3412;border:1px solid #fdba74; }
+  .badge-red { background:#fee2e2;color:#991b1b;border:1px solid #fca5a5; }
+  .badge-gray { background:#f3f4f6;color:#374151;border:1px solid #d1d5db; }
+  .badge-yellow { background:#fef9c3;color:#854d0e;border:1px solid #fde047; }
+  .codebox { background: #0d0d1a; border-radius: 8px; padding: 10px 12px; font-family: monospace; font-size: 12px; color: #e2e8f0; margin-top: 6px; }
+  pre.codebox { white-space: pre-wrap; line-height: 1.5; }
+  .label { color: #818cf8; font-size: 12px; font-weight: 700; margin-bottom: 6px; margin-top: 10px; }
+  .flow-box { border-radius: 10px; padding: 10px 24px; text-align: center; margin: 0 auto; min-width: 280px; }
+  .flow-wrap { display: flex; flex-direction: column; align-items: center; }
+  .arrow-line { width: 2px; height: 16px; background: #4f46e5; }
+  .arrow-label { color: #818cf8; font-size: 11px; font-weight: 600; background: #1e1b4b; border: 1px solid #4338ca; border-radius: 20px; padding: 2px 12px; margin: 0; }
+  .arrow-tip { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #4f46e5; }
+  .step-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .step-btn { padding: 6px 12px; border-radius: 8px; border: 1px solid #2d2d4e; background: #1a1a2e; color: #64748b; cursor: pointer; font-size: 12px; font-weight: 400; transition: all 0.2s; }
+  .step-btn.active { color: #fff; font-weight: 700; }
+  .result-box { border-radius: 8px; padding: 12px; font-size: 13px; line-height: 1.7; white-space: pre-line; color: #e2e8f0; }
+  .section-label { color: #818cf8; font-size: 12px; font-weight: 700; margin-bottom: 6px; margin-top: 12px; }
+  .pipeline { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .pipeline-note { color: #64748b; font-size: 11px; margin-top: 8px; line-height: 1.6; }
+  .info-box { background: #0d0d1a; border-radius: 8px; padding: 12px; margin-top: 8px; }
+  .info-box .title { color: #818cf8; font-weight: 700; margin-bottom: 8px; font-size: 13px; }
+  .info-box .text { color: #94a3b8; font-size: 12px; line-height: 1.8; }
+  .sep { color: #4b5563; }
+  @media(max-width:600px) { .grid2, .grid2-sm { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="subtitle">AIWeb Creator</div>
+  <h1>Guía Visual del Backend API</h1>
+  <p class="base-url">Base URL: <code>http://localhost:3001/api</code></p>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('flujo',this)">🔄 Flujo General</button>
+  <button class="tab" onclick="showTab('roles',this)">👥 Roles</button>
+  <button class="tab" onclick="showTab('entidades',this)">📦 Entidades</button>
+  <button class="tab" onclick="showTab('cotizacion',this)">💰 Ciclo Cotización</button>
+  <button class="tab" onclick="showTab('ia',this)">🤖 IA</button>
+</div>
+
+<div class="content">
+
+  <!-- FLUJO GENERAL -->
+  <div id="tab-flujo" class="section active">
+    <h2>¿Cómo funciona todo junto?</h2>
+    <div class="grid2" style="margin-bottom:14px">
+      <div class="card" style="border-color:#4338ca">
+        <div style="font-size:22px;margin-bottom:8px">🌐</div>
+        <div style="font-weight:700;color:#a5b4fc;margin-bottom:6px">Sitio Público (sin login)</div>
+        <div style="color:#94a3b8;font-size:13px;line-height:1.6">Cualquier visitante puede ver servicios, portafolio, testimonios y chatear con la IA. También puede llenar el formulario de contacto.</div>
+      </div>
+      <div class="card" style="border-color:#7c3aed">
+        <div style="font-size:22px;margin-bottom:8px">🔐</div>
+        <div style="font-weight:700;color:#c4b5fd;margin-bottom:6px">Panel Privado (con login)</div>
+        <div style="color:#94a3b8;font-size:13px;line-height:1.6">Admins gestionan todo el CRM. Clientes registrados pueden ver sus cotizaciones y aceptarlas/rechazarlas.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700;color:#f1f5f9;margin-bottom:16px;font-size:15px">🔄 Flujo de vida de un cliente</div>
+      <div class="flow-wrap">
+        <div class="flow-box" style="background:#1e1b4b;border:1px solid #4338ca">
+          <div style="font-size:18px">👤</div>
+          <div style="font-weight:700;color:#a5b4fc">Visitante llena formulario</div>
+          <div style="color:#64748b;font-size:12px">POST /prospectos (público)</div>
+        </div>
+        <div class="arrow-line"></div>
+        <div class="arrow-label">Se crea un PROSPECTO en estado NUEVO</div>
+        <div class="arrow-line"></div>
+        <div class="arrow-tip"></div>
+        <div class="flow-box" style="background:#1c1917;border:1px solid #78350f;margin-top:0">
+          <div style="font-size:18px">📬</div>
+          <div style="font-weight:700;color:#fbbf24">Admin contacta al prospecto</div>
+          <div style="color:#64748b;font-size:12px">PATCH /prospectos/:id/estado → CONTACTADO</div>
+        </div>
+        <div class="arrow-line"></div>
+        <div class="arrow-label">Admin crea una cotización</div>
+        <div class="arrow-line"></div>
+        <div class="arrow-tip"></div>
+        <div class="flow-box" style="background:#0f172a;border:1px solid #1d4ed8;margin-top:0">
+          <div style="font-size:18px">📄</div>
+          <div style="font-weight:700;color:#60a5fa">Admin crea y envía cotización</div>
+          <div style="color:#64748b;font-size:12px">POST /cotizaciones → PATCH estado ENVIADA</div>
+        </div>
+        <div class="arrow-line"></div>
+        <div class="arrow-label">Sistema envía correo al prospecto</div>
+        <div class="arrow-line"></div>
+        <div class="arrow-tip"></div>
+        <div class="flow-box" style="background:#052e16;border:1px solid #166534;margin-top:0">
+          <div style="font-size:18px">✅</div>
+          <div style="font-weight:700;color:#4ade80">Cliente acepta la cotización</div>
+          <div style="color:#64748b;font-size:12px">PATCH /cotizaciones/:id/responder → ACEPTADA</div>
+        </div>
+        <div class="arrow-line"></div>
+        <div class="arrow-label">Prospecto → CONVERTIDO automáticamente</div>
+        <div class="arrow-line"></div>
+        <div class="arrow-tip"></div>
+        <div class="flow-box" style="background:#1a0533;border:1px solid #6d28d9;margin-top:0">
+          <div style="font-size:18px">🚀</div>
+          <div style="font-weight:700;color:#c084fc">¡Nuevo cliente! Proyecto en marcha</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div style="font-weight:700;color:#f1f5f9;margin-bottom:12px;font-size:15px">🔑 Autenticación — cómo funciona</div>
+      <div class="grid2">
+        <div>
+          <div class="endpoint"><span class="method POST">POST</span><div><code>/autenticacion/registrar</code><div class="desc">Crea cuenta → devuelve tokenAcceso + tokenRefresco</div></div></div>
+          <div class="endpoint"><span class="method POST">POST</span><div><code>/autenticacion/login</code><div class="desc">Login → devuelve tokens</div></div></div>
+          <div class="endpoint"><span class="method POST">POST</span><div><code>/autenticacion/refrescar</code><div class="desc">Renueva el token (expira en 8h)</div></div></div>
+        </div>
+        <div class="info-box">
+          <div class="title">📌 En tu frontend:</div>
+          <div class="text">
+            1. Guarda <code style="color:#c084fc">tokenAcceso</code> en localStorage<br>
+            2. En cada request protegido agrega:<br>
+            <code style="color:#4ade80;font-size:11px">Authorization: Bearer {tokenAcceso}</code><br>
+            3. Si recibes 401 → usa tokenRefresco para renovar
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROLES -->
+  <div id="tab-roles" class="section">
+    <h2>👥 ¿Qué puede hacer cada rol?</h2>
+
+    <div class="card" style="border-color:#374151">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <span style="font-size:24px">🌍</span>
+        <div>
+          <div style="font-weight:800;font-size:16px;color:#9ca3af">Sin autenticación (Público)</div>
+          <div style="color:#4b5563;font-size:13px">Cualquier visitante del sitio web</div>
+        </div>
+      </div>
+      <div class="grid2-sm">
+        <div>
+          <div class="endpoint"><span class="method GET">GET</span><div><code>/servicios</code><div class="desc">Ver catálogo con precios COP/USD</div></div></div>
+          <div class="endpoint"><span class="method GET">GET</span><div><code>/proyectos</code><div class="desc">Ver portafolio de proyectos</div></div></div>
+          <div class="endpoint"><span class="method GET">GET</span><div><code>/testimonios/destacados</code><div class="desc">Ver testimonios aprobados</div></div></div>
+        </div>
+        <div>
+          <div class="endpoint"><span class="method POST">POST</span><div><code>/prospectos</code><div class="desc">Enviar formulario de contacto</div></div></div>
+          <div class="endpoint"><span class="method POST">POST</span><div><code>/ia/chat</code><div class="desc">Chatear con el bot de la agencia</div></div></div>
+          <div class="endpoint"><span class="method POST">POST</span><div><code>/testimonios</code><div class="desc">Enviar testimonio (queda pendiente)</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:#1d4ed8">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <span style="font-size:24px">🧑‍💼</span>
+        <div>
+          <div style="font-weight:800;font-size:16px;color:#60a5fa">CLIENTE <span class="badge badge-blue">rol: CLIENTE</span></div>
+          <div style="color:#475569;font-size:13px">Usuario registrado que ya fue prospecto</div>
+        </div>
+      </div>
+      <div class="grid2-sm">
+        <div>
+          <div class="endpoint"><span class="method GET">GET</span><div><code>/autenticacion/perfil</code><div class="desc">Ver su propio perfil</div></div></div>
+          <div class="endpoint"><span class="method PUT">PUT</span><div><code>/usuarios/perfil</code><div class="desc">Actualizar nombre, teléfono, empresa</div></div></div>
+          <div class="endpoint"><span class="method PATCH">PATCH</span><div><code>/usuarios/contrasena</code><div class="desc">Cambiar su contraseña</div></div></div>
+        </div>
+        <div>
+          <div class="endpoint"><span class="method GET">GET</span><div><code>/cotizaciones/mis-cotizaciones</code><div class="desc">Ver sus cotizaciones recibidas</div></div></div>
+          <div class="endpoint"><span class="method PATCH">PATCH</span><div><code>/cotizaciones/:id/responder</code><div class="desc">Aceptar o rechazar cotización</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:#7c3aed">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <span style="font-size:24px">🛡️</span>
+        <div>
+          <div style="font-weight:800;font-size:16px;color:#c084fc">ADMIN <span class="badge badge-purple">rol: ADMIN</span></div>
+          <div style="color:#475569;font-size:13px">Control total del sistema</div>
+        </div>
+      </div>
+      <div class="grid2-sm">
+        <div>
+          <div class="section-label">USUARIOS</div>
+          <div class="endpoint"><span class="method GET">GET</span><div><code>/usuarios</code><div class="desc">Listar y filtrar todos</div></div></div>
+          <div class="endpoint"><span class="method POST">POST</span><div><code>/usuarios</code><div class="desc">Crear usuario directamente</div></div></div>
+          <div class="endpoint"><span class="method PATCH">PATCH</span><div><code>/usuarios/:id/rol</code><div class="desc">Cambiar CLIENTE ↔ ADMIN</div></div></div>
+          <div class="endpoint"><span class="method PATCH">PATCH</span><div><code>/usuarios/:id/activar</code><div class="desc">Bloquear/desbloquear cuenta</div></div></div>
+          <div class="section-label" style="margin-top:10px">CRM (PROSPECTOS)</div>
+          <div class="endpoint"><span class="method GET">GET</span><div><code>/prospectos/resumen</code><div class="desc">Dashboard: totales, conversiones</div></div></div>
+          <div class="endpoint"><span class="method PATCH">PATCH</span><div><code>/prospectos/:id/estado</code><div class="desc">Mover en el pipeline</div></div></div>
+          <div class="endpoint"><span class="method PATCH">PATCH</span><div><code>/prospectos/:id/asignar</code><div class="desc">Asignar a usuario</div></div></div>
+        </div>
+        <div>
+          <div class="section-label">SERVICIOS Y PROYECTOS</div>
+          <div class="endpoint"><span class="method POST">POST</span><div><code>/servicios</code><div class="desc">Crear nuevo servicio</div></div></div>
+          <div class="endpoint"><span class="method PUT">PUT</span><div><code>/servicios/:id</code><div class="desc">Editar precio, features, etc.</div></div></div>
+          <div class="endpoint"><span class="method POST">POST</span><div><code>/proyectos</code><div class="desc">Agregar al portafolio</div></div></div>
+          <div class="endpoint"><span class="method POST">POST</span><div><code>/imagenes/proyectos/:id</code><div class="desc">Subir imagen a Cloudinary</div></div></div>
+          <div class="section-label" style="margin-top:10px">COTIZACIONES</div>
+          <div class="endpoint"><span class="method POST">POST</span><div><code>/cotizaciones</code><div class="desc">Crear cotización para prospecto</div></div></div>
+          <div class="endpoint"><span class="method PATCH">PATCH</span><div><code>/cotizaciones/:id/estado</code><div class="desc">Cambiar estado y enviar correo</div></div></div>
+          <div class="endpoint"><span class="method POST">POST</span><div><code>/cotizaciones/:id/duplicar</code><div class="desc">Clonar cotización existente</div></div></div>
+          <div class="endpoint"><span class="method PATCH">PATCH</span><div><code>/testimonios/:id/moderar</code><div class="desc">Aprobar/ocultar testimonios</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENTIDADES -->
+  <div id="tab-entidades" class="section">
+    <h2>📦 Las 5 entidades principales</h2>
+
+    <div class="card" style="border-color:#1d4ed8">
+      <div style="font-weight:800;font-size:15px;color:#60a5fa;margin-bottom:10px">🛒 SERVICIO — El catálogo de lo que ofreces</div>
+      <div style="color:#94a3b8;font-size:13px;line-height:1.7;margin-bottom:10px">
+        Son los productos/paquetes que vendes (Ej: Landing Page, E-commerce). Tienen rango de precio en COP, tiempo de entrega y características. Son <strong style="color:#93c5fd">públicos</strong>. Los precios se muestran también en USD con tasa en tiempo real.
+      </div>
+      <span class="badge badge-blue">nombre</span><span class="badge badge-blue">slug</span><span class="badge badge-blue">precioDesde/Hasta</span><span class="badge badge-blue">semanasEntrega</span><span class="badge badge-blue">caracteristicas[]</span>
+    </div>
+
+    <div class="card" style="border-color:#7c3aed">
+      <div style="font-weight:800;font-size:15px;color:#c084fc;margin-bottom:10px">🖼️ PROYECTO — Tu portafolio</div>
+      <div style="color:#94a3b8;font-size:13px;line-height:1.7;margin-bottom:10px">
+        Trabajos realizados que muestras al público. Cada proyecto tiene stack tecnológico, URL en vivo, imagen en Cloudinary y puede marcarse como "destacado" para aparecer en la home.
+      </div>
+      <span class="badge badge-purple">titulo</span><span class="badge badge-purple">slug</span><span class="badge badge-purple">stackTecnico[]</span><span class="badge badge-purple">urlEnVivo</span><span class="badge badge-purple">imagen</span><span class="badge badge-purple">destacado</span>
+    </div>
+
+    <div class="card" style="border-color:#b45309">
+      <div style="font-weight:800;font-size:15px;color:#fbbf24;margin-bottom:10px">📋 PROSPECTO — Lead / Contacto del formulario</div>
+      <div style="color:#94a3b8;font-size:13px;line-height:1.7;margin-bottom:10px">
+        Cualquier persona que llena el formulario. <strong style="color:#fde68a">No necesita estar registrada</strong>. El admin los gestiona como un CRM. Si el correo coincide con un usuario registrado, se vinculan automáticamente.
+      </div>
+      <div style="margin-bottom:8px">
+        <span class="badge badge-yellow">nombre</span><span class="badge badge-yellow">correo</span><span class="badge badge-yellow">telefono</span><span class="badge badge-yellow">tipoServicio</span><span class="badge badge-yellow">presupuesto</span><span class="badge badge-yellow">fuente</span>
+      </div>
+      <div class="codebox">
+        <div style="color:#fbbf24;font-weight:700;font-size:12px;margin-bottom:6px">Pipeline de estados:</div>
+        <div class="pipeline">
+          <span class="badge badge-blue">NUEVO</span>
+          <span class="sep">→</span>
+          <span class="badge badge-yellow">CONTACTADO</span>
+          <span class="sep">→</span>
+          <span class="badge badge-green">CONVERTIDO</span>
+          <span class="sep">|</span>
+          <span class="badge badge-red">PERDIDO</span>
+        </div>
+        <div class="pipeline-note">
+          Al crear cotización: NUEVO → CONTACTADO automático<br>
+          Al aceptar cotización: → CONVERTIDO automático<br>
+          Al rechazar cotización: → PERDIDO automático
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:#166534">
+      <div style="font-weight:800;font-size:15px;color:#4ade80;margin-bottom:10px">💰 COTIZACIÓN — La propuesta económica</div>
+      <div style="color:#94a3b8;font-size:13px;line-height:1.7;margin-bottom:10px">
+        El admin crea una cotización para un prospecto, vinculada a un servicio. Al marcarla como <code style="color:#4ade80">ENVIADA</code>, el sistema envía un correo automático. El cliente la acepta o rechaza desde su panel.
+      </div>
+      <div class="codebox">
+        <div style="color:#4ade80;font-weight:700;font-size:12px;margin-bottom:6px">Estados:</div>
+        <div class="pipeline">
+          <span class="badge badge-gray">PENDIENTE</span>
+          <span class="sep">→</span>
+          <span class="badge badge-blue">ENVIADA</span>
+          <span class="sep">→</span>
+          <span class="badge badge-green">ACEPTADA</span>
+          <span class="sep">|</span>
+          <span class="badge badge-red">RECHAZADA</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:#d97706">
+      <div style="font-weight:800;font-size:15px;color:#fb923c;margin-bottom:10px">⭐ TESTIMONIO — Reviews de clientes</div>
+      <div style="color:#94a3b8;font-size:13px;line-height:1.7;margin-bottom:10px">
+        Los clientes los envían públicamente. <strong style="color:#fdba74">Empiezan ocultos</strong> hasta que el admin los aprueba. El campo <code>sitioWeb</code> es un honeypot anti-bots (debe ir vacío). Solo los visibles con calificación ≥4 aparecen en el sitio.
+      </div>
+      <span class="badge badge-orange">nombreCliente</span><span class="badge badge-orange">contenido</span><span class="badge badge-orange">calificacion (1-5)</span><span class="badge badge-orange">visible (admin aprueba)</span>
+    </div>
+  </div>
+
+  <!-- COTIZACIÓN CICLO -->
+  <div id="tab-cotizacion" class="section">
+    <h2>💰 Ciclo completo de una cotización</h2>
+    <p style="color:#64748b;font-size:13px;margin-bottom:16px">Haz clic en cada paso para ver el detalle</p>
+
+    <div class="step-btns" id="stepBtns"></div>
+    <div id="stepCard" class="card"></div>
+
+    <div class="card" style="margin-top:14px">
+      <div style="font-weight:700;color:#f1f5f9;margin-bottom:10px;font-size:14px">👤 Vista del cliente en su panel</div>
+      <div class="grid2-sm">
+        <div class="endpoint"><span class="method GET">GET</span><div><code>/cotizaciones/mis-cotizaciones</code><div class="desc">Ve sus cotizaciones (por correo y userId)</div></div></div>
+        <div class="endpoint"><span class="method PATCH">PATCH</span><div><code>/cotizaciones/:id/responder</code><div class="desc">Acepta o rechaza — solo si está en ENVIADA</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- IA -->
+  <div id="tab-ia" class="section">
+    <h2>🤖 Funciones de IA (Groq — Llama 3.3)</h2>
+
+    <div class="card" style="border-color:#0891b2">
+      <div style="font-weight:800;font-size:15px;color:#22d3ee;margin-bottom:8px">💬 Chat del sitio web (público)</div>
+      <div style="color:#94a3b8;font-size:13px;margin-bottom:10px">Widget de chat que responde preguntas sobre los servicios. <span class="badge badge-orange">Limitado: 10 req / 15 min</span></div>
+      <div class="endpoint"><span class="method POST">POST</span><div><code>/ia/chat</code><div class="desc">Enviar mensaje con historial</div></div></div>
+      <div class="codebox">{"mensaje": "¿Cuánto cuesta una landing?", "historial": [...]}</div>
+      <div style="color:#64748b;font-size:12px;margin-top:6px">💡 El bot ya tiene el catálogo de servicios inyectado automáticamente.</div>
+    </div>
+
+    <div class="card" style="border-color:#7c3aed;margin-top:14px">
+      <div style="font-weight:800;font-size:15px;color:#c084fc;margin-bottom:8px">📊 Lead Scoring — Analizar prospecto (admin)</div>
+      <div style="color:#94a3b8;font-size:13px;margin-bottom:10px">La IA analiza un prospecto y devuelve score de probabilidad de compra.</div>
+      <div class="endpoint"><span class="method POST">POST</span><div><code>/ia/analizar-prospecto</code><div class="desc">Requiere prospectoId — usa datos reales del CRM</div></div></div>
+      <div class="codebox" style="margin-top:8px">
+        <div style="color:#818cf8;font-size:12px;margin-bottom:4px">Devuelve:</div>
+        <span class="badge badge-purple">puntaje: 0-100</span>
+        <span class="badge badge-blue">nivel: FRÍO/TIBIO/CALIENTE</span>
+        <span class="badge badge-green">fortalezas[]</span>
+        <span class="badge badge-red">riesgos[]</span>
+        <span class="badge badge-yellow">acciones[]</span>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:#1d4ed8;margin-top:14px">
+      <div style="font-weight:800;font-size:15px;color:#60a5fa;margin-bottom:8px">📝 Generar propuesta comercial (admin)</div>
+      <div style="color:#94a3b8;font-size:13px;margin-bottom:10px">Genera propuesta en Markdown personalizada con los datos reales del CRM.</div>
+      <div class="endpoint"><span class="method POST">POST</span><div><code>/ia/propuesta</code><div class="desc">Devuelve Markdown listo para enviar o editar</div></div></div>
+    </div>
+
+    <div class="card" style="border-color:#166534;margin-top:14px">
+      <div style="font-weight:800;font-size:15px;color:#4ade80;margin-bottom:8px">🔍 Generar descripción SEO de proyecto (admin)</div>
+      <div style="color:#94a3b8;font-size:13px;margin-bottom:10px">Dado el título y stack, genera textos optimizados para SEO.</div>
+      <div class="endpoint"><span class="method POST">POST</span><div><code>/ia/descripcion-proyecto</code><div class="desc">Devuelve descripción corta, larga, metaDescription y etiquetas</div></div></div>
+      <div class="codebox">{"titulo": "Tienda Online", "stackTecnico": ["Next.js","Stripe"], "tipoServicio": "ECOMMERCE"}</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function showTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+const steps = [
+  { emoji:"📝", title:"1. Visitante llena el formulario", role:"Público", color:"#6b7280",
+    endpoint:"POST /api/prospectos",
+    body:`{\n  "nombre": "María García",\n  "correo": "maria@empresa.com",\n  "telefono": "+573151234567",\n  "tipoServicio": "LANDING",\n  "mensaje": "Necesito una landing page",\n  "presupuesto": 2000000,\n  "fuente": "Google"\n}`,
+    resultado:"Se crea un PROSPECTO en estado NUEVO.\nSe envía correo de notificación al admin." },
+  { emoji:"📬", title:"2. Admin revisa y contacta", role:"Admin", color:"#7c3aed",
+    endpoint:"PATCH /api/prospectos/:id/estado",
+    body:`{\n  "estado": "CONTACTADO",\n  "notas": "Llamé al cliente, está interesado."\n}`,
+    resultado:"Prospecto cambia a estado CONTACTADO.\nEl admin puede ver resumen en GET /prospectos/resumen." },
+  { emoji:"💡", title:"3. Admin usa IA (opcional)", role:"Admin", color:"#0891b2",
+    endpoint:"POST /api/ia/analizar-prospecto",
+    body:`{\n  "prospectoId": "abc123"\n}`,
+    resultado:"Devuelve scoring del lead:\n- Puntaje: 1-100\n- Nivel: FRÍO / TIBIO / CALIENTE\n- Fortalezas y riesgos\n- Acciones recomendadas" },
+  { emoji:"📄", title:"4. Admin crea la cotización", role:"Admin", color:"#1d4ed8",
+    endpoint:"POST /api/cotizaciones",
+    body:`{\n  "prospectoId": "abc123",\n  "servicioId": "srv456",\n  "extras": ["SEO avanzado"],\n  "precioTotal": 2500000,\n  "notas": "Incluye 3 meses de soporte"\n}`,
+    resultado:"Cotización creada en estado PENDIENTE.\nEl prospecto pasa a CONTACTADO si estaba en NUEVO." },
+  { emoji:"📤", title:"5. Admin envía la cotización", role:"Admin", color:"#0369a1",
+    endpoint:"PATCH /api/cotizaciones/:id/estado",
+    body:`{\n  "estado": "ENVIADA",\n  "notas": "Enviada por correo al cliente"\n}`,
+    resultado:"📧 El sistema envía automáticamente\nun correo al prospecto con la cotización." },
+  { emoji:"✅", title:"6. Cliente responde", role:"Cliente", color:"#166534",
+    endpoint:"PATCH /api/cotizaciones/:id/responder",
+    body:`{\n  "estado": "ACEPTADA"\n}`,
+    resultado:"Si ACEPTADA → Prospecto pasa a CONVERTIDO.\nSi RECHAZADA → Prospecto pasa a PERDIDO." },
+];
+
+let currentStep = 0;
+
+function renderSteps() {
+  const btns = document.getElementById('stepBtns');
+  btns.innerHTML = steps.map((s,i) => `<button class="step-btn ${i===0?'active':''}" id="sbtn${i}" onclick="setStep(${i})">${s.emoji} Paso ${i+1}</button>`).join('');
+  renderStepCard(0);
+}
+
+function setStep(i) {
+  currentStep = i;
+  document.querySelectorAll('.step-btn').forEach((b,j) => {
+    b.classList.toggle('active', j===i);
+    b.style.borderColor = j===i ? steps[j].color : '#2d2d4e';
+    b.style.background = j===i ? steps[j].color+'22' : '#1a1a2e';
+    b.style.color = j===i ? '#fff' : '#64748b';
+  });
+  renderStepCard(i);
+}
+
+function renderStepCard(i) {
+  const s = steps[i];
+  const roleColor = s.role==='Admin'?'badge-purple':s.role==='Público'?'badge-gray':'badge-blue';
+  document.getElementById('stepCard').style.borderColor = s.color;
+  document.getElementById('stepCard').innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <span style="font-size:32px">${s.emoji}</span>
+      <div>
+        <div style="font-weight:800;font-size:16px;color:#f1f5f9">${s.title}</div>
+        <span class="badge ${roleColor}">${s.role}</span>
+      </div>
+    </div>
+    <div class="grid2">
+      <div>
+        <div class="label">ENDPOINT</div>
+        <div class="codebox"><code style="color:#4ade80;font-size:13px">${s.endpoint}</code></div>
+        <div class="label">BODY (JSON)</div>
+        <pre class="codebox">${s.body}</pre>
+      </div>
+      <div>
+        <div class="label">QUÉ PASA</div>
+        <div class="result-box" style="background:${s.color}11;border:1px solid ${s.color}44">${s.resultado}</div>
+      </div>
+    </div>`;
+}
+
+renderSteps();
+</script>
+</body>
+</html>

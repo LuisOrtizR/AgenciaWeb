@@ -5,45 +5,81 @@ import {
   FiltrosProyecto,
 } from './proyectos.tipos.js'
 
-/**
- * Capa de lógica de negocio para proyectos (portafolio).
- */
+const selectServicio = { id: true, nombre: true, slug: true } as const
 
-// ─── Listar proyectos públicos con paginación y filtros ───────────────────────
-export const listarProyectos = async (filtros: FiltrosProyecto) => {
-  const { pagina, porPagina, busqueda, destacado, servicioId, tecnologia } = filtros
+const incluirPublico = {
+  servicio:    { select: selectServicio },
+  testimonios: {
+    where:  { visible: true },
+    select: {
+      id:            true,
+      nombreCliente: true,
+      empresa:       true,
+      contenido:     true,
+      calificacion:  true,
+      creadoEn:      true,
+    },
+  },
+} as const
 
-  const donde = {
-    ...(destacado  !== undefined && { destacado: destacado === 'true' }),
+const buscarOLanzar = async (id: string) => {
+  const proyecto = await prisma.proyecto.findUnique({
+    where:   { id },
+    include: { servicio: true, testimonios: true },
+  })
+  if (!proyecto) throw new Error('Proyecto no encontrado')
+  return proyecto
+}
+
+const verificarSlugUnico = async (slug: string, excluirId?: string) => {
+  const existente = await prisma.proyecto.findFirst({
+    where: { slug, ...(excluirId && { NOT: { id: excluirId } }) },
+    select: { id: true },
+  })
+  if (existente) throw new Error(`Ya existe un proyecto con el slug "${slug}"`)
+}
+
+const verificarServicioExiste = async (servicioId: string) => {
+  const servicio = await prisma.servicio.findUnique({
+    where:  { id: servicioId },
+    select: { id: true, activo: true },
+  })
+  if (!servicio)        throw new Error('El servicio indicado no existe')
+  if (!servicio.activo) throw new Error('El servicio indicado esta inactivo')
+}
+
+const construirFiltros = (filtros: FiltrosProyecto) => {
+  const { busqueda, destacado, servicioId, tecnologia } = filtros
+  return {
+    ...(destacado  !== undefined && { destacado }),
     ...(servicioId !== undefined && { servicioId }),
+    ...(tecnologia && { stackTecnico: { array_contains: tecnologia } }),
     ...(busqueda   && {
       OR: [
         { titulo:      { contains: busqueda, mode: 'insensitive' as const } },
         { descripcion: { contains: busqueda, mode: 'insensitive' as const } },
       ],
     }),
-    // Filtrar por tecnología dentro del array JSON
-    ...(tecnologia && {
-      stackTecnico: { array_contains: tecnologia },
-    }),
   }
+}
+
+export const listarProyectos = async (filtros: FiltrosProyecto) => {
+  const { pagina, porPagina, ordenarPor, direccion } = filtros
+  const donde  = construirFiltros(filtros)
+  const saltar = (pagina - 1) * porPagina
+
+  const ordenBase =
+    ordenarPor === 'creadoEn'
+      ? [{ destacado: 'desc' as const }, { creadoEn: direccion }]
+      : [{ [ordenarPor]: direccion }]
 
   const [datos, total] = await Promise.all([
     prisma.proyecto.findMany({
       where:   donde,
-      orderBy: [
-        { destacado: 'desc' }, // Destacados primero
-        { creadoEn:  'desc' },
-      ],
-      skip: (pagina - 1) * porPagina,
-      take: porPagina,
-      include: {
-        servicio:    { select: { id: true, nombre: true, slug: true } },
-        testimonios: {
-          where:  { visible: true },
-          select: { id: true, nombreCliente: true, calificacion: true, contenido: true },
-        },
-      },
+      orderBy: ordenBase,
+      skip:    saltar,
+      take:    porPagina,
+      include: incluirPublico,
     }),
     prisma.proyecto.count({ where: donde }),
   ])
@@ -59,71 +95,34 @@ export const listarProyectos = async (filtros: FiltrosProyecto) => {
   }
 }
 
-// ─── Listar solo destacados (para página de inicio) ───────────────────────────
-export const listarDestacados = async () => {
-  return prisma.proyecto.findMany({
+export const listarDestacados = async () =>
+  prisma.proyecto.findMany({
     where:   { destacado: true },
     orderBy: { creadoEn: 'desc' },
     take:    6,
     include: {
-      servicio:    { select: { id: true, nombre: true, slug: true } },
+      servicio:    { select: selectServicio },
       testimonios: {
         where:  { visible: true },
         select: { id: true, nombreCliente: true, calificacion: true },
       },
     },
   })
-}
 
-// ─── Obtener uno por slug (público) ──────────────────────────────────────────
 export const obtenerProyectoPorSlug = async (slug: string) => {
   const proyecto = await prisma.proyecto.findUnique({
     where:   { slug },
-    include: {
-      servicio:    true,
-      testimonios: {
-        where:  { visible: true },
-        select: {
-          id:           true,
-          nombreCliente: true,
-          empresa:      true,
-          contenido:    true,
-          calificacion: true,
-          creadoEn:     true,
-        },
-      },
-    },
+    include: incluirPublico,
   })
   if (!proyecto) throw new Error('Proyecto no encontrado')
   return proyecto
 }
 
-// ─── Obtener uno por id (admin) ───────────────────────────────────────────────
-export const obtenerProyectoPorId = async (id: string) => {
-  const proyecto = await prisma.proyecto.findUnique({
-    where:   { id },
-    include: {
-      servicio:    true,
-      testimonios: true,
-    },
-  })
-  if (!proyecto) throw new Error('Proyecto no encontrado')
-  return proyecto
-}
+export const obtenerProyectoPorId = async (id: string) => buscarOLanzar(id)
 
-// ─── Crear proyecto (solo ADMIN) ─────────────────────────────────────────────
 export const crearProyecto = async (datos: DatosCrearProyecto) => {
-  const existente = await prisma.proyecto.findUnique({
-    where: { slug: datos.slug },
-  })
-  if (existente) throw new Error('Ya existe un proyecto con ese slug')
-
-  if (datos.servicioId) {
-    const servicio = await prisma.servicio.findUnique({
-      where: { id: datos.servicioId },
-    })
-    if (!servicio) throw new Error('El servicio indicado no existe')
-  }
+  await verificarSlugUnico(datos.slug)
+  if (datos.servicioId) await verificarServicioExiste(datos.servicioId)
 
   return prisma.proyecto.create({
     data: {
@@ -131,91 +130,69 @@ export const crearProyecto = async (datos: DatosCrearProyecto) => {
       slug:         datos.slug,
       descripcion:  datos.descripcion,
       stackTecnico: datos.stackTecnico,
-      imagenUrl:    datos.imagenUrl,
-      urlEnVivo:    datos.urlEnVivo,
-      urlGithub:    datos.urlGithub,
-      destacado:    datos.destacado ?? false,
-      servicioId:   datos.servicioId,
+      imagenUrl:    datos.imagenUrl    ?? null,
+      urlEnVivo:    datos.urlEnVivo    ?? null,
+      urlGithub:    datos.urlGithub    ?? null,
+      destacado:    datos.destacado    ?? false,
+      servicioId:   datos.servicioId   ?? null,
     },
-    include: {
-      servicio: { select: { id: true, nombre: true, slug: true } },
-    },
+    include: { servicio: { select: selectServicio } },
   })
 }
 
-// ─── Actualizar proyecto (solo ADMIN) ────────────────────────────────────────
 export const actualizarProyecto = async (id: string, datos: DatosActualizarProyecto) => {
-  await obtenerProyectoPorId(id)
-
-  if (datos.slug) {
-    const existente = await prisma.proyecto.findFirst({
-      where: { slug: datos.slug, NOT: { id } },
-    })
-    if (existente) throw new Error('Ya existe un proyecto con ese slug')
-  }
-
-  if (datos.servicioId) {
-    const servicio = await prisma.servicio.findUnique({
-      where: { id: datos.servicioId },
-    })
-    if (!servicio) throw new Error('El servicio indicado no existe')
-  }
+  await buscarOLanzar(id)
+  if (datos.slug)      await verificarSlugUnico(datos.slug, id)
+  if (datos.servicioId) await verificarServicioExiste(datos.servicioId)
 
   return prisma.proyecto.update({
     where:   { id },
     data:    datos,
-    include: { servicio: { select: { id: true, nombre: true, slug: true } } },
+    include: { servicio: { select: selectServicio } },
   })
 }
 
-// ─── Marcar / desmarcar como destacado ───────────────────────────────────────
 export const toggleDestacado = async (id: string) => {
-  const proyecto = await obtenerProyectoPorId(id)
+  const proyecto = await buscarOLanzar(id)
   return prisma.proyecto.update({
-    where: { id },
-    data:  { destacado: !proyecto.destacado },
+    where:  { id },
+    data:   { destacado: !proyecto.destacado },
+    select: { id: true, titulo: true, slug: true, destacado: true },
   })
 }
 
-// ─── Actualizar imagen ────────────────────────────────────────────────────────
-export const actualizarImagen = async (id: string, imagenUrl: string) => {
-  await obtenerProyectoPorId(id)
+export const actualizarImagen = async (id: string, imagenUrl: string | null) => {
+  await buscarOLanzar(id)
   return prisma.proyecto.update({
-    where: { id },
-    data:  { imagenUrl },
+    where:  { id },
+    data:   { imagenUrl },
+    select: { id: true, titulo: true, slug: true, imagenUrl: true },
   })
 }
 
-// ─── Eliminar proyecto (solo ADMIN) ──────────────────────────────────────────
 export const eliminarProyecto = async (id: string) => {
-  const proyecto = await obtenerProyectoPorId(id)
+  const proyecto = await buscarOLanzar(id)
 
-  const totalTestimonios = await prisma.testimonio.count({
-    where: { proyectoId: id },
-  })
-
+  const totalTestimonios = await prisma.testimonio.count({ where: { proyectoId: id } })
   if (totalTestimonios > 0) {
     throw new Error(
-      `No se puede eliminar un proyecto con ${totalTestimonios} testimonio(s) asociado(s). Elimínalos primero.`
+      `No se puede eliminar un proyecto con ${totalTestimonios} testimonio(s) asociado(s). Eliminalos primero.`
     )
   }
 
   await prisma.proyecto.delete({ where: { id } })
-  return proyecto
+  return { id: proyecto.id, titulo: proyecto.titulo, slug: proyecto.slug }
 }
 
-// ─── Resumen de tecnologías usadas ────────────────────────────────────────────
 export const resumenTecnologias = async () => {
   const proyectos = await prisma.proyecto.findMany({
     select: { stackTecnico: true },
   })
 
   const conteo: Record<string, number> = {}
-
-  for (const proyecto of proyectos) {
-    const stack = proyecto.stackTecnico as string[]
-    for (const tecnologia of stack) {
-      conteo[tecnologia] = (conteo[tecnologia] ?? 0) + 1
+  for (const { stackTecnico } of proyectos) {
+    for (const tec of stackTecnico as string[]) {
+      conteo[tec] = (conteo[tec] ?? 0) + 1
     }
   }
 

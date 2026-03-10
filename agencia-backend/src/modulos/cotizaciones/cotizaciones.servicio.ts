@@ -254,14 +254,26 @@ export const misCotizaciones = async (correoUsuario: string, usuarioId: string) 
 }
 
 // ─── Responder cotización — cliente (ACEPTAR o RECHAZAR) ─────────────────────
+// ─── Responder cotización — cliente (ACEPTAR o RECHAZAR) ─────────────────────
 export const responderCotizacion = async (
   id:             string,
   correoUsuario:  string,
-  estado:         'ACEPTADA' | 'RECHAZADA'
+  estado:         'ACEPTADA' | 'RECHAZADA',
+  usuarioId?:     string
 ) => {
   const cotizacion = await obtenerCotizacionPorId(id)
 
-  if (cotizacion.prospecto.correo !== correoUsuario) {
+  // Verificar permiso: por correo O por usuarioId vinculado al prospecto
+  const prospectoVinculado = await prisma.prospecto.findUnique({
+    where:  { id: cotizacion.prospectoId },
+    select: { correo: true, usuarioId: true },
+  })
+
+  const tienePermiso =
+    prospectoVinculado?.correo    === correoUsuario ||
+    (usuarioId && prospectoVinculado?.usuarioId === usuarioId)
+
+  if (!tienePermiso) {
     throw new Error('No tienes permiso para responder esta cotización')
   }
 

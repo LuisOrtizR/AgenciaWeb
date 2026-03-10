@@ -7,27 +7,7 @@ datasource db {
   provider = "postgresql"
 }
 
-
-model Usuario {
-  id                String    @id @default(uuid())
-  nombre            String
-  correo            String    @unique
-  contrasena        String
-  rol               RolUsuario @default(CLIENTE)
-  telefono          String?
-  empresa           String?
-  activo            Boolean   @default(true)
-  tokenReset        String?
-  tokenResetExpira  DateTime?
-  creadoEn          DateTime  @default(now())
-  actualizadoEn     DateTime  @updatedAt
-
-  prospectos   Prospecto[]
-  cotizaciones Cotizacion[]
-  testimonios  Testimonio[]
-
-  @@map("usuarios")
-}
+// ─── Enums ────────────────────────────────────────────────────────────────────
 
 enum RolUsuario {
   ADMIN
@@ -56,17 +36,40 @@ enum EstadoCotizacion {
   RECHAZADA
 }
 
+// ─── Modelos ──────────────────────────────────────────────────────────────────
+
+model Usuario {
+  id               String     @id @default(uuid())
+  nombre           String
+  correo           String     @unique
+  contrasena       String
+  rol              RolUsuario @default(CLIENTE)
+  telefono         String?
+  empresa          String?
+  activo           Boolean    @default(true)
+  tokenReset       String?
+  tokenResetExpira DateTime?
+  creadoEn         DateTime   @default(now())
+  actualizadoEn    DateTime   @updatedAt
+
+  prospectos   Prospecto[]
+  cotizaciones Cotizacion[]
+  testimonios  Testimonio[]
+
+  @@map("usuarios")
+}
+
 model Servicio {
-  id              String   @id @default(uuid())
-  nombre          String
-  slug            String   @unique
-  descripcion     String
-  precioDesde     Int
-  precioHasta     Int
-  semanasEntrega  Int
+  id             String   @id @default(uuid())
+  nombre         String
+  slug           String   @unique
+  descripcion    String
+  precioDesde    Int
+  precioHasta    Int
+  semanasEntrega Int
   caracteristicas Json
-  activo          Boolean  @default(true)
-  creadoEn        DateTime @default(now())
+  activo         Boolean  @default(true)
+  creadoEn       DateTime @default(now())
 
   proyectos    Proyecto[]
   cotizaciones Cotizacion[]

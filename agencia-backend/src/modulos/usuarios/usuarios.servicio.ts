@@ -9,82 +9,71 @@ import {
   FiltrosUsuario,
 } from './usuarios.tipos.js'
 
-/**
- * Capa de lógica de negocio para usuarios.
- * Propio:   ver perfil, actualizar perfil, cambiar contraseña
- * ADMIN:    listar, crear, actualizar, activar, desactivar, eliminar, resumen
- */
 
-// ─── Campos seguros — nunca devolver contraseña ───────────────────────────────
 const camposPublicos = {
-  id:           true,
-  nombre:       true,
-  correo:       true,
-  rol:          true,
-  telefono:     true,
-  empresa:      true,
-  activo:       true,
-  creadoEn:     true,
+  id:            true,
+  nombre:        true,
+  correo:        true,
+  rol:           true,
+  telefono:      true,
+  empresa:       true,
+  activo:        true,
+  creadoEn:      true,
   actualizadoEn: true,
+} as const
+
+const conteoRelaciones = {
+  _count: { select: { prospectos: true, cotizaciones: true, testimonios: true } },
+} as const
+
+
+const buscarOLanzar = async (id: string) => {
+  const u = await prisma.usuario.findUnique({ where: { id }, select: { ...camposPublicos, activo: true, rol: true } })
+  if (!u) throw new Error('Usuario no encontrado')
+  return u
 }
 
-// ─── Ver perfil propio ────────────────────────────────────────────────────────
+const guardarEstado = (id: string, activo: boolean) =>
+  prisma.usuario.update({ where: { id }, data: { activo }, select: camposPublicos })
+
+const protegerAutoAccion = (id: string, adminId: string, accion: string) => {
+  if (id === adminId) throw new Error(`No puedes ${accion} tu propia cuenta`)
+}
+
+const hashear = (contrasena: string) => bcrypt.hash(contrasena, entorno.BCRYPT_RONDAS)
+
+
 export const obtenerPerfil = async (usuarioId: string) => {
-  const usuario = await prisma.usuario.findUnique({
+  const u = await prisma.usuario.findUnique({
     where:  { id: usuarioId },
-    select: {
-      ...camposPublicos,
-      _count: {
-        select: {
-          prospectos:   true,
-          cotizaciones: true,
-          testimonios:  true,
-        },
-      },
-    },
+    select: { ...camposPublicos, ...conteoRelaciones },
   })
-  if (!usuario) throw new Error('Usuario no encontrado')
-  return usuario
+  if (!u) throw new Error('Usuario no encontrado')
+  return u
 }
 
-// ─── Actualizar perfil propio ─────────────────────────────────────────────────
 export const actualizarPerfil = async (usuarioId: string, datos: DatosActualizarPerfil) => {
-  await obtenerPerfil(usuarioId)
-
-  return prisma.usuario.update({
-    where:  { id: usuarioId },
-    data:   datos,
-    select: camposPublicos,
-  })
+  await buscarOLanzar(usuarioId)
+  return prisma.usuario.update({ where: { id: usuarioId }, data: datos, select: camposPublicos })
 }
 
-// ─── Cambiar contraseña propia ────────────────────────────────────────────────
 export const cambiarContrasena = async (usuarioId: string, datos: DatosCambiarContrasena) => {
-  const usuario = await prisma.usuario.findUnique({
-    where: { id: usuarioId },
-  })
-  if (!usuario) throw new Error('Usuario no encontrado')
+  const u = await prisma.usuario.findUnique({ where: { id: usuarioId }, select: { contrasena: true } })
+  if (!u) throw new Error('Usuario no encontrado')
 
-  const contrasenaValida = await bcrypt.compare(datos.contrasenaActual, usuario.contrasena)
-  if (!contrasenaValida) throw new Error('La contraseña actual es incorrecta')
+  const valida = await bcrypt.compare(datos.contrasenaActual, u.contrasena)
+  if (!valida) throw new Error('La contrasena actual es incorrecta')
 
-  const hash = await bcrypt.hash(datos.contrasenaNueva, entorno.BCRYPT_RONDAS)
-
-  await prisma.usuario.update({
-    where: { id: usuarioId },
-    data:  { contrasena: hash },
-  })
-
-  return { mensaje: 'Contraseña actualizada exitosamente' }
+  await prisma.usuario.update({ where: { id: usuarioId }, data: { contrasena: await hashear(datos.contrasenaNueva) } })
+  return { mensaje: 'Contrasena actualizada correctamente' }
 }
 
-// ─── Listar usuarios — solo ADMIN ────────────────────────────────────────────
+
 export const listarUsuarios = async (filtros: FiltrosUsuario) => {
   const { pagina, porPagina, busqueda, rol, activo } = filtros
-
   const donde = {
     ...(rol    && { rol }),
-    ...(activo !== undefined && { activo: activo === 'true' }),
+    ...(activo !== undefined && { activo }),
     ...(busqueda && {
       OR: [
         { nombre:  { contains: busqueda, mode: 'insensitive' as const } },
@@ -100,16 +89,7 @@ export const listarUsuarios = async (filtros: FiltrosUsuario) => {
       orderBy: { creadoEn: 'desc' },
       skip:    (pagina - 1) * porPagina,
       take:    porPagina,
-      select: {
-        ...camposPublicos,
-        _count: {
-          select: {
-            prospectos:   true,
-            cotizaciones: true,
-            testimonios:  true,
-          },
-        },
-      },
+      select:  { ...camposPublicos, ...conteoRelaciones },
     }),
     prisma.usuario.count({ where: donde }),
   ])
@@ -125,149 +105,123 @@ export const listarUsuarios = async (filtros: FiltrosUsuario) => {
   }
 }
 
-// ─── Obtener usuario por id — solo ADMIN ─────────────────────────────────────
+
 export const obtenerUsuarioPorId = async (id: string) => {
-  const usuario = await prisma.usuario.findUnique({
+  const u = await prisma.usuario.findUnique({
     where:  { id },
     select: {
       ...camposPublicos,
+      ...conteoRelaciones,
       prospectos: {
-        orderBy: { creadoEn: 'desc' },
-        take:    5,
+        orderBy: { creadoEn: 'desc' }, take: 5,
         select:  { id: true, nombre: true, tipoServicio: true, estado: true, creadoEn: true },
       },
       cotizaciones: {
-        orderBy: { creadoEn: 'desc' },
-        take:    5,
+        orderBy: { creadoEn: 'desc' }, take: 5,
         select:  { id: true, precioTotal: true, estado: true, creadoEn: true },
       },
       testimonios: {
-        orderBy: { creadoEn: 'desc' },
-        take:    5,
+        orderBy: { creadoEn: 'desc' }, take: 5,
         select:  { id: true, contenido: true, calificacion: true, visible: true, creadoEn: true },
-      },
-      _count: {
-        select: {
-          prospectos:   true,
-          cotizaciones: true,
-          testimonios:  true,
-        },
       },
     },
   })
-  if (!usuario) throw new Error('Usuario no encontrado')
-  return usuario
+  if (!u) throw new Error('Usuario no encontrado')
+  return u
 }
 
-// ─── Crear usuario — solo ADMIN ──────────────────────────────────────────────
-export const crearUsuario = async (datos: DatosCrearUsuario) => {
-  const existente = await prisma.usuario.findUnique({
-    where: { correo: datos.correo },
-  })
-  if (existente) throw new Error('Ya existe un usuario con ese correo')
 
-  const hash = await bcrypt.hash(datos.contrasena, entorno.BCRYPT_RONDAS)
+export const crearUsuario = async (datos: DatosCrearUsuario) => {
+  const correo = datos.correo.toLowerCase().trim()
+  const existe = await prisma.usuario.findUnique({ where: { correo }, select: { id: true } })
+  if (existe) throw new Error('Ya existe un usuario con ese correo')
 
   return prisma.usuario.create({
     data: {
-      nombre:    datos.nombre,
-      correo:    datos.correo,
-      contrasena: hash,
-      rol:       datos.rol,
-      telefono:  datos.telefono,
-      empresa:   datos.empresa,
+      nombre:     datos.nombre,
+      correo,
+      contrasena: await hashear(datos.contrasena),
+      rol:        datos.rol,
+      telefono:   datos.telefono ?? null,
+      empresa:    datos.empresa  ?? null,
     },
     select: camposPublicos,
   })
 }
 
-// ─── Actualizar usuario — solo ADMIN ─────────────────────────────────────────
+
 export const actualizarUsuario = async (id: string, datos: DatosActualizarUsuario) => {
-  await obtenerUsuarioPorId(id)
-
-  return prisma.usuario.update({
-    where:  { id },
-    data:   datos,
-    select: camposPublicos,
-  })
+  await buscarOLanzar(id)
+  return prisma.usuario.update({ where: { id }, data: datos, select: camposPublicos })
 }
 
-// ─── Activar usuario — solo ADMIN ────────────────────────────────────────────
+
 export const activarUsuario = async (id: string) => {
-  await obtenerUsuarioPorId(id)
-  return prisma.usuario.update({
-    where:  { id },
-    data:   { activo: true },
-    select: camposPublicos,
-  })
+  const u = await buscarOLanzar(id)
+  if (u.activo) throw new Error('El usuario ya esta activo')
+  return guardarEstado(id, true)
 }
 
-// ─── Desactivar usuario — solo ADMIN ─────────────────────────────────────────
 export const desactivarUsuario = async (id: string, adminId: string) => {
-  if (id === adminId) throw new Error('No puedes desactivar tu propia cuenta')
-
-  const usuario = await obtenerUsuarioPorId(id)
-  if (!usuario.activo) throw new Error('El usuario ya está desactivado')
-
-  return prisma.usuario.update({
-    where:  { id },
-    data:   { activo: false },
-    select: camposPublicos,
-  })
+  protegerAutoAccion(id, adminId, 'desactivar')
+  const u = await buscarOLanzar(id)
+  if (!u.activo) throw new Error('El usuario ya esta desactivado')
+  return guardarEstado(id, false)
 }
 
-// ─── Cambiar rol — solo ADMIN ─────────────────────────────────────────────────
+
 export const cambiarRol = async (id: string, rol: 'ADMIN' | 'CLIENTE', adminId: string) => {
-  if (id === adminId) throw new Error('No puedes cambiar tu propio rol')
-
-  await obtenerUsuarioPorId(id)
-
-  return prisma.usuario.update({
-    where:  { id },
-    data:   { rol },
-    select: camposPublicos,
-  })
+  protegerAutoAccion(id, adminId, 'cambiar el rol de')
+  const u = await buscarOLanzar(id)
+  if (u.rol === rol) throw new Error(`El usuario ya tiene el rol ${rol}`)
+  return prisma.usuario.update({ where: { id }, data: { rol }, select: camposPublicos })
 }
 
-// ─── Eliminar usuario — solo ADMIN ───────────────────────────────────────────
+
 export const eliminarUsuario = async (id: string, adminId: string) => {
-  if (id === adminId) throw new Error('No puedes eliminar tu propia cuenta')
+  protegerAutoAccion(id, adminId, 'eliminar')
+  await buscarOLanzar(id)
 
-  const usuario = await obtenerUsuarioPorId(id)
-
-  // Verificar que no tenga registros vinculados
   const [prospectos, cotizaciones, testimonios] = await Promise.all([
-    prisma.prospecto.count({   where: { usuarioId: id } }),
-    prisma.cotizacion.count({  where: { usuarioId: id } }),
-    prisma.testimonio.count({  where: { usuarioId: id } }),
+    prisma.prospecto.count({  where: { usuarioId: id } }),
+    prisma.cotizacion.count({ where: { usuarioId: id } }),
+    prisma.testimonio.count({ where: { usuarioId: id } }),
   ])
 
   if (prospectos > 0 || cotizaciones > 0 || testimonios > 0) {
     throw new Error(
-      `No se puede eliminar el usuario porque tiene registros asociados: ${prospectos} prospecto(s), ${cotizaciones} cotización(es), ${testimonios} testimonio(s). Desactívalo en su lugar.`
+      `El usuario tiene registros asociados: ${prospectos} prospecto(s), ${cotizaciones} cotizacion(es), ${testimonios} testimonio(s). Desactivalo en su lugar.`
     )
   }
 
   await prisma.usuario.delete({ where: { id } })
-  return usuario
+  return { id, eliminado: true }
 }
 
-// ─── Resumen para dashboard — solo ADMIN ─────────────────────────────────────
+
 export const resumenUsuarios = async () => {
-  const [total, activos, inactivos, admins, clientes] = await Promise.all([
+  const ahora     = new Date()
+  const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1)
+
+  const [total, activos, admins, esteMes, recientes] = await Promise.all([
     prisma.usuario.count(),
-    prisma.usuario.count({ where: { activo: true  } }),
-    prisma.usuario.count({ where: { activo: false } }),
+    prisma.usuario.count({ where: { activo: true } }),
     prisma.usuario.count({ where: { rol: 'ADMIN'  } }),
-    prisma.usuario.count({ where: { rol: 'CLIENTE'} }),
+    prisma.usuario.count({ where: { creadoEn: { gte: inicioMes } } }),
+    prisma.usuario.findMany({
+      orderBy: { creadoEn: 'desc' },
+      take:    5,
+      select:  { id: true, nombre: true, correo: true, rol: true, activo: true, creadoEn: true },
+    }),
   ])
 
-  // Últimos 5 registrados
-  const recientes = await prisma.usuario.findMany({
-    orderBy: { creadoEn: 'desc' },
-    take:    5,
-    select:  { id: true, nombre: true, correo: true, rol: true, creadoEn: true },
-  })
-
-  return { total, activos, inactivos, admins, clientes, recientes }
+  return {
+    total,
+    activos,
+    inactivos: total - activos,
+    admins,
+    clientes:  total - admins,
+    esteMes,
+    recientes,
+  }
 }
