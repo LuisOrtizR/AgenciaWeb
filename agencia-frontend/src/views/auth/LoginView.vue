@@ -9,6 +9,8 @@ const router    = useRouter()
 const authStore = useAuthStore()
 const uiStore   = useUiStore()
 
+const empresaNombre = import.meta.env.VITE_EMPRESA_NOMBRE as string
+
 const form = ref({ correo: '', contrasena: '' })
 const cargando    = ref(false)
 const mostrarPass = ref(false)
@@ -30,7 +32,6 @@ const iniciarSesion = async () => {
     const { data } = await autenticacionServicio.login(form.value)
     authStore.establecerSesion(data.datos)
     uiStore.exito('Sesión iniciada', `Bienvenido/a, ${data.datos.usuario.nombre}`)
-    // Redirigir según rol
     const destino = data.datos.usuario.rol === 'ADMIN'
       ? { name: 'admin-dashboard' }
       : { name: 'cliente-perfil' }
@@ -59,14 +60,14 @@ const iniciarSesion = async () => {
       <div class="text-center mb-8">
         <RouterLink :to="{ name: 'inicio' }" class="inline-flex items-center gap-2.5">
           <div class="w-10 h-10 rounded-2xl bg-linear-to-br from-violeta to-indigo-500 flex items-center justify-center shadow-lg shadow-violeta/30">
-            <span class="text-white font-black text-lg">N</span>
+            <span class="text-white font-black text-sm">AI</span>
           </div>
           <span class="text-white font-bold text-2xl tracking-tight">
-            Nexova<span class="text-violeta">.</span>
+            AIWeb<span class="text-violeta"> CREATOR</span>
           </span>
         </RouterLink>
         <h1 class="mt-6 text-2xl font-black text-white">Iniciar sesión</h1>
-        <p class="mt-2 text-gris-medio text-sm">Accede a tu cuenta de Nexova Studio</p>
+        <p class="mt-2 text-gris-medio text-sm">Accede a tu cuenta de {{ empresaNombre }}</p>
       </div>
 
       <!-- Card -->
@@ -93,7 +94,15 @@ const iniciarSesion = async () => {
 
           <!-- Contraseña -->
           <div class="space-y-1.5">
-            <label class="block text-sm font-medium text-blanco-suave">Contraseña</label>
+            <div class="flex items-center justify-between">
+              <label class="block text-sm font-medium text-blanco-suave">Contraseña</label>
+              <RouterLink
+                :to="{ name: 'olvide-contrasena' }"
+                class="text-xs text-violeta-claro hover:text-violeta transition-colors"
+              >
+                ¿Olvidaste tu contraseña?
+              </RouterLink>
+            </div>
             <div class="relative">
               <input
                 v-model="form.contrasena"

@@ -22,38 +22,53 @@ const filtros = reactive({
 const cargar = async () => {
   cargando.value = true
   try {
-    const params: Record<string, unknown> = { pagina: pag.paginaActual.value, porPagina: pag.porPagina.value }
+    const params: Record<string, unknown> = {
+      pagina:    pag.paginaActual.value,
+      porPagina: pag.porPagina.value,
+    }
     if (filtros.busqueda) params.busqueda = filtros.busqueda
     if (filtros.visible)  params.visible  = filtros.visible
     const { data } = await testimoniosServicio.listarAdmin(params as any)
     testimonios.value = data.datos
     pag.actualizarPaginacion(data.paginacion)
-  } catch { uiStore.error('Error', 'No se pudieron cargar los testimonios') }
-  finally { cargando.value = false }
+  } catch {
+    uiStore.error('Error', 'No se pudieron cargar los testimonios')
+  } finally {
+    cargando.value = false
+  }
 }
 
 onMounted(cargar)
-watch([filtros, () => pag.paginaActual.value], () => {
-  if (pag.paginaActual.value !== 1) pag.reiniciar()
-  else cargar()
+
+watch(filtros, () => {
+  pag.paginaActual.value = 1
+  cargar()
 }, { deep: true })
+
+const cambiarPagina = (pagina: number) => {
+  pag.irAPagina(pagina)
+  cargar()
+}
 
 const moderar = async (t: Testimonio) => {
   try {
     await testimoniosServicio.moderar(t.id, { visible: !t.visible })
     uiStore.exito(t.visible ? 'Testimonio ocultado' : 'Testimonio aprobado y visible')
     cargar()
-  } catch { uiStore.error('Error', 'No se pudo moderar') }
+  } catch {
+    uiStore.error('Error', 'No se pudo moderar')
+  }
 }
 
 const eliminar = async (t: Testimonio) => {
-  // ✅ FIX: t.nombre en lugar de t.nombreCliente
-  if (!confirm(`¿Eliminar el testimonio de ${t.nombre}?`)) return
+  if (!confirm(`¿Eliminar el testimonio de ${t.nombreCliente}?`)) return
   try {
     await testimoniosServicio.eliminar(t.id)
     uiStore.exito('Testimonio eliminado')
     cargar()
-  } catch { uiStore.error('Error', 'No se pudo eliminar') }
+  } catch {
+    uiStore.error('Error', 'No se pudo eliminar')
+  }
 }
 
 const estrellas = (n: number) => '★'.repeat(n) + '☆'.repeat(5 - n)
@@ -64,12 +79,12 @@ const formatearFecha = (f: string) =>
 
 <template>
   <div class="space-y-6 max-w-5xl mx-auto">
+
     <div>
       <h1 class="text-2xl font-bold text-white">Testimonios</h1>
       <p class="text-gris-medio text-sm mt-1">Modera los comentarios de clientes antes de publicarlos</p>
     </div>
 
-    <!-- Filtros -->
     <div class="flex flex-col sm:flex-row gap-3">
       <div class="flex-1 relative">
         <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gris-medio pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -85,7 +100,6 @@ const formatearFecha = (f: string) =>
       </select>
     </div>
 
-    <!-- Cards de testimonios -->
     <div v-if="cargando" class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div v-for="i in 6" :key="i" class="h-40 bg-white/5 rounded-2xl animate-pulse" />
     </div>
@@ -100,13 +114,11 @@ const formatearFecha = (f: string) =>
         v-for="t in testimonios"
         :key="t.id"
         class="bg-[#13151f] border rounded-2xl p-5 transition-all"
-        :class="t.visible ? 'border-white/5' : 'border-amarillo/20 bg-amarillo/5'"
+        :class="t.visible ? 'border-white/5' : 'border-amarillo/20 bg-amarillo/3'"
       >
-        <!-- Header -->
         <div class="flex items-start justify-between mb-3">
           <div>
-            <!-- ✅ FIX: t.nombre en lugar de t.nombreCliente -->
-            <p class="text-sm font-medium text-white">{{ t.nombre }}</p>
+            <p class="text-sm font-medium text-white">{{ t.nombreCliente }}</p>
             <p v-if="t.empresa" class="text-xs text-gris-medio">{{ t.empresa }}</p>
             <p class="text-amarillo text-sm mt-1 tracking-widest">{{ estrellas(t.calificacion) }}</p>
           </div>
@@ -115,15 +127,12 @@ const formatearFecha = (f: string) =>
           </AppInsignia>
         </div>
 
-        <!-- ✅ FIX: t.texto en lugar de t.contenido -->
-        <p class="text-sm text-blanco-suave leading-relaxed line-clamp-3">{{ t.texto }}</p>
+        <p class="text-sm text-blanco-suave leading-relaxed line-clamp-3">{{ t.contenido }}</p>
 
-        <!-- Proyecto relacionado -->
         <p v-if="t.proyecto" class="text-xs text-gris-medio mt-2">
           Proyecto: <span class="text-violeta-claro">{{ t.proyecto.titulo }}</span>
         </p>
 
-        <!-- Acciones -->
         <div class="flex items-center justify-between mt-4 pt-4 border-t border-white/5">
           <span class="text-xs text-gris-medio">{{ formatearFecha(t.creadoEn) }}</span>
           <div class="flex items-center gap-1">
@@ -145,7 +154,13 @@ const formatearFecha = (f: string) =>
     </div>
 
     <div v-if="pag.totalPaginas.value > 1" class="bg-[#13151f] border border-white/5 rounded-2xl px-6 py-4">
-      <AppPaginacion :pagina-actual="pag.paginaActual.value" :total-paginas="pag.totalPaginas.value" :total-registros="pag.totalRegistros.value" :por-pagina="pag.porPagina.value" @cambiar="pag.irAPagina" />
+      <AppPaginacion
+        :pagina-actual="pag.paginaActual.value"
+        :total-paginas="pag.totalPaginas.value"
+        :total-registros="pag.totalRegistros.value"
+        :por-pagina="pag.porPagina.value"
+        @cambiar="cambiarPagina"
+      />
     </div>
   </div>
 </template>

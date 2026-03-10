@@ -19,17 +19,21 @@ import * as controlador          from './cotizaciones.controlador.js'
 
 const router = Router()
 
-// Todas las rutas requieren autenticación y rol ADMIN
+// ── Rutas de cliente (solo autenticación, sin rol ADMIN) ──
+router.get(   '/mis-cotizaciones', requerirAutenticacion, controlador.misCotizaciones)
+router.patch( '/:id/responder',    requerirAutenticacion, controlador.responderCotizacion)
+
+// ── Rutas de admin (requieren ADMIN) ──────────────────────
 router.use(requerirAutenticacion, requerirRol('ADMIN'))
 
-router.get(   '/resumen',                   controlador.resumen)
-router.get(   '/prospecto/:prospectoId',    controlador.porProspecto)
-router.get(   '/',                          controlador.listar)
-router.get(   '/:id',                       controlador.obtenerPorId)
-router.post(  '/',                          controlador.crear)
-router.put(   '/:id',                       controlador.actualizar)
-router.patch( '/:id/estado',                controlador.actualizarEstado)
-router.post(  '/:id/duplicar',              controlador.duplicar)
-router.delete('/:id',                       controlador.eliminar)
+router.get(   '/resumen',                controlador.resumen)
+router.get(   '/prospecto/:prospectoId', controlador.porProspecto)
+router.get(   '/',                       controlador.listar)
+router.get(   '/:id',                    controlador.obtenerPorId)
+router.post(  '/',                       controlador.crear)
+router.put(   '/:id',                    controlador.actualizar)
+router.patch( '/:id/estado',             controlador.actualizarEstado)
+router.post(  '/:id/duplicar',           controlador.duplicar)
+router.delete('/:id',                    controlador.eliminar)
 
 export default router

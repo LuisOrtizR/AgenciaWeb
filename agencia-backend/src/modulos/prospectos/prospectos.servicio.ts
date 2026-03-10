@@ -9,21 +9,34 @@ import {
 
 /**
  * Capa de lógica de negocio para prospectos.
- * Al crear → envía correo al admin y confirmación al cliente.
+ *
+ * Al crear:
+ *   → Si el correo coincide con un usuario registrado, se vincula automáticamente (usuarioId).
+ *   → Envía correo al admin y confirmación al cliente.
+ *
  * Al cambiar estado → lógica automática de CRM.
  */
 
 // ─── Crear prospecto — público (formulario de contacto) ───────────────────────
 export const crearProspecto = async (datos: DatosCrearProspecto) => {
+
+  // Buscar si existe un usuario registrado con ese correo
+  // Así el cliente puede ver sus cotizaciones aunque no esté logueado al enviar
+  const usuarioVinculado = await prisma.usuario.findUnique({
+    where:  { correo: datos.correo.toLowerCase().trim() },
+    select: { id: true },
+  })
+
   const prospecto = await prisma.prospecto.create({
     data: {
       nombre:       datos.nombre,
-      correo:       datos.correo,
-      telefono:     datos.telefono,
+      correo:       datos.correo.toLowerCase().trim(),
+      telefono:     datos.telefono   ?? null,
       tipoServicio: datos.tipoServicio,
-      mensaje:      datos.mensaje,
-      presupuesto:  datos.presupuesto,
-      fuente:       datos.fuente,
+      mensaje:      datos.mensaje    ?? null,
+      presupuesto:  datos.presupuesto ?? null,
+      fuente:       datos.fuente     ?? null,
+      usuarioId:    usuarioVinculado?.id ?? null,  // ← vínculo automático
     },
   })
 
@@ -31,21 +44,21 @@ export const crearProspecto = async (datos: DatosCrearProspecto) => {
   notificarNuevoProspecto({
     nombre:       datos.nombre,
     correo:       datos.correo,
-    telefono:     datos.telefono,
+    telefono:     datos.telefono     ?? null,
     tipoServicio: datos.tipoServicio,
-    mensaje:      datos.mensaje,
-    presupuesto:  datos.presupuesto ?? null,
-    fuente:       datos.fuente ?? null,
+    mensaje:      datos.mensaje      ?? null,
+    presupuesto:  datos.presupuesto  ?? null,
+    fuente:       datos.fuente       ?? null,
   }).catch(() => {})
 
   confirmarRecepcionProspecto({
     nombre:       datos.nombre,
     correo:       datos.correo,
-    telefono:     datos.telefono,
+    telefono:     datos.telefono     ?? null,
     tipoServicio: datos.tipoServicio,
-    mensaje:      datos.mensaje,
-    presupuesto:  datos.presupuesto ?? null,
-    fuente:       datos.fuente ?? null,
+    mensaje:      datos.mensaje      ?? null,
+    presupuesto:  datos.presupuesto  ?? null,
+    fuente:       datos.fuente       ?? null,
   }).catch(() => {})
 
   return prospecto
@@ -74,11 +87,11 @@ export const listarProspectos = async (filtros: FiltrosProspecto) => {
       skip:    (pagina - 1) * porPagina,
       take:    porPagina,
       include: {
-        usuario:     { select: { id: true, nombre: true, correo: true } },
+        usuario: { select: { id: true, nombre: true, correo: true } },
         cotizaciones: {
-          select: { id: true, estado: true, precioTotal: true, creadoEn: true },
+          select:  { id: true, estado: true, precioTotal: true, creadoEn: true },
           orderBy: { creadoEn: 'desc' },
-          take: 3,
+          take:    3,
         },
       },
     }),
@@ -101,7 +114,7 @@ export const obtenerProspectoPorId = async (id: string) => {
   const prospecto = await prisma.prospecto.findUnique({
     where: { id },
     include: {
-      usuario:     { select: { id: true, nombre: true, correo: true } },
+      usuario: { select: { id: true, nombre: true, correo: true } },
       cotizaciones: {
         include: { servicio: { select: { id: true, nombre: true } } },
         orderBy: { creadoEn: 'desc' },
@@ -116,11 +129,9 @@ export const obtenerProspectoPorId = async (id: string) => {
 export const actualizarProspecto = async (id: string, datos: DatosActualizarProspecto) => {
   await obtenerProspectoPorId(id)
   return prisma.prospecto.update({
-    where: { id },
-    data:  datos,
-    include: {
-      usuario: { select: { id: true, nombre: true } },
-    },
+    where:   { id },
+    data:    datos,
+    include: { usuario: { select: { id: true, nombre: true } } },
   })
 }
 
@@ -133,7 +144,7 @@ export const actualizarEstado = async (id: string, datos: DatosActualizarEstadoP
   })
 }
 
-// ─── Asignar usuario — admin ──────────────────────────────────────────────────
+// ─── Asignar usuario manualmente — admin ──────────────────────────────────────
 export const asignarUsuario = async (prospectoId: string, usuarioId: string | null) => {
   await obtenerProspectoPorId(prospectoId)
 
@@ -143,8 +154,8 @@ export const asignarUsuario = async (prospectoId: string, usuarioId: string | nu
   }
 
   return prisma.prospecto.update({
-    where: { id: prospectoId },
-    data:  { usuarioId },
+    where:   { id: prospectoId },
+    data:    { usuarioId },
     include: { usuario: { select: { id: true, nombre: true } } },
   })
 }
@@ -165,7 +176,6 @@ export const resumenProspectos = async () => {
     }),
   ])
 
-  // Últimos 5 prospectos recientes
   const recientes = await prisma.prospecto.findMany({
     orderBy: { creadoEn: 'desc' },
     take:    5,

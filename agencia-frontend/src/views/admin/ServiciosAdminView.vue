@@ -1,6 +1,5 @@
 <script setup lang="ts">
-// ServiciosAdminView.vue
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useUiStore } from '@/stores/ui'
 import { serviciosServicio } from '@/services/servicios'
 import AppBoton      from '@/components/ui/AppBoton.vue'
@@ -29,18 +28,32 @@ const caracteristicasTexto = ref('')
 const cargar = async () => {
   cargando.value = true
   try {
-    const { data } = await serviciosServicio.listarAdmin({ pagina: pag.paginaActual.value, porPagina: pag.porPagina.value })
+    const { data } = await serviciosServicio.listarAdmin({
+      pagina:    pag.paginaActual.value,
+      porPagina: pag.porPagina.value,
+    })
     servicios.value = data.datos
     pag.actualizarPaginacion(data.paginacion)
-  } catch { uiStore.error('Error', 'No se pudieron cargar los servicios') }
-  finally { cargando.value = false }
+  } catch {
+    uiStore.error('Error', 'No se pudieron cargar los servicios')
+  } finally {
+    cargando.value = false
+  }
 }
 
 onMounted(cargar)
-watch(() => pag.paginaActual.value, cargar)
+
+const cambiarPagina = (pagina: number) => {
+  pag.irAPagina(pagina)
+  cargar()
+}
 
 const reset = () => {
-  Object.assign(formulario, { nombre: '', slug: '', descripcion: '', precioDesde: 0, precioHasta: 0, semanasEntrega: 4, caracteristicas: [], activo: true })
+  Object.assign(formulario, {
+    nombre: '', slug: '', descripcion: '',
+    precioDesde: 0, precioHasta: 0, semanasEntrega: 4,
+    caracteristicas: [], activo: true,
+  })
   caracteristicasTexto.value = ''
   editando.value = null
 }
@@ -49,13 +62,22 @@ const abrirCrear = () => { reset(); modalForm.value = true }
 
 const abrirEditar = (s: Servicio) => {
   editando.value = s
-  Object.assign(formulario, { ...s, activo: s.activo })
+  Object.assign(formulario, {
+    ...s,
+    precioHasta: s.precioHasta ?? 0,
+    activo: s.activo,
+  })
   caracteristicasTexto.value = s.caracteristicas.join('\n')
   modalForm.value = true
 }
 
 const generarSlug = () => {
-  formulario.slug = formulario.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  formulario.slug = formulario.nombre
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
 }
 
 const guardar = async () => {
@@ -72,8 +94,11 @@ const guardar = async () => {
     modalForm.value = false
     reset()
     cargar()
-  } catch { uiStore.error('Error', 'No se pudo guardar') }
-  finally { guardando.value = false }
+  } catch {
+    uiStore.error('Error', 'No se pudo guardar')
+  } finally {
+    guardando.value = false
+  }
 }
 
 const toggleActivo = async (s: Servicio) => {
@@ -82,7 +107,9 @@ const toggleActivo = async (s: Servicio) => {
     else          await serviciosServicio.activar(s.id)
     uiStore.exito(s.activo ? 'Servicio desactivado' : 'Servicio activado')
     cargar()
-  } catch { uiStore.error('Error', 'No se pudo actualizar el estado') }
+  } catch {
+    uiStore.error('Error', 'No se pudo actualizar el estado')
+  }
 }
 
 const eliminar = async (s: Servicio) => {
@@ -91,14 +118,18 @@ const eliminar = async (s: Servicio) => {
     await serviciosServicio.eliminar(s.id)
     uiStore.exito('Servicio eliminado')
     cargar()
-  } catch { uiStore.error('Error', 'No se pudo eliminar') }
+  } catch {
+    uiStore.error('Error', 'No se pudo eliminar')
+  }
 }
 
-const formatearMoneda = (m: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(m)
+const formatearMoneda = (m: number) =>
+  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(m)
 </script>
 
 <template>
   <div class="space-y-6 max-w-5xl mx-auto">
+
     <div class="flex items-center justify-between gap-4">
       <div>
         <h1 class="text-2xl font-bold text-white">Servicios</h1>
@@ -138,7 +169,7 @@ const formatearMoneda = (m: number) => new Intl.NumberFormat('es-CO', { style: '
             </td>
             <td class="px-4 py-4 hidden md:table-cell">
               <p class="text-sm text-blanco-suave">{{ formatearMoneda(s.precioDesde) }}</p>
-              <p class="text-xs text-gris-medio">hasta {{ formatearMoneda(s.precioHasta) }}</p>
+              <p class="text-xs text-gris-medio">hasta {{ formatearMoneda(s.precioHasta ?? 0) }}</p>
             </td>
             <td class="px-4 py-4 hidden lg:table-cell">
               <span class="text-sm text-blanco-suave">{{ s.semanasEntrega }} sem.</span>
@@ -163,23 +194,30 @@ const formatearMoneda = (m: number) => new Intl.NumberFormat('es-CO', { style: '
       </table>
 
       <div v-if="pag.totalPaginas.value > 1" class="px-6 py-4 border-t border-white/5">
-        <AppPaginacion :pagina-actual="pag.paginaActual.value" :total-paginas="pag.totalPaginas.value" :total-registros="pag.totalRegistros.value" :por-pagina="pag.porPagina.value" @cambiar="pag.irAPagina" />
+        <AppPaginacion
+          :pagina-actual="pag.paginaActual.value"
+          :total-paginas="pag.totalPaginas.value"
+          :total-registros="pag.totalRegistros.value"
+          :por-pagina="pag.porPagina.value"
+          @cambiar="cambiarPagina"
+        />
       </div>
     </div>
 
-    <!-- Modal -->
     <AppModal :abierto="modalForm" :titulo="editando ? 'Editar servicio' : 'Nuevo servicio'" tamano="md" @cerrar="modalForm = false">
       <div class="space-y-4">
         <div class="grid grid-cols-2 gap-4">
           <div class="space-y-1.5">
             <label class="block text-sm font-medium text-blanco-suave">Nombre <span class="text-rojo">*</span></label>
-            <input v-model="formulario.nombre" type="text" class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-violeta/50 text-white text-sm outline-none" @blur="!editando && !formulario.slug && generarSlug()" />
+            <input v-model="formulario.nombre" type="text"
+              class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-violeta/50 text-white text-sm outline-none"
+              @blur="!editando && !formulario.slug && generarSlug()" />
           </div>
           <div class="space-y-1.5">
             <label class="block text-sm font-medium text-blanco-suave">Slug</label>
             <div class="flex gap-2">
               <input v-model="formulario.slug" type="text" class="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-violeta/50 text-white text-sm outline-none" />
-              <button type="button" class="px-3 rounded-xl bg-white/5 border border-white/10 text-xs text-gris-medio hover:text-white" @click="generarSlug">Auto</button>
+              <button type="button" class="px-3 rounded-xl bg-white/5 border border-white/10 text-xs text-gris-medio hover:text-white transition-all" @click="generarSlug">Auto</button>
             </div>
           </div>
         </div>
@@ -206,10 +244,10 @@ const formatearMoneda = (m: number) => new Intl.NumberFormat('es-CO', { style: '
 
         <div class="space-y-1.5">
           <label class="block text-sm font-medium text-blanco-suave">Características (una por línea)</label>
-          <textarea v-model="caracteristicasTexto" rows="4" placeholder="Diseño responsivo&#10;SEO optimizado&#10;Panel de administración" class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-violeta/50 text-white placeholder-gris-medio text-sm outline-none resize-none font-mono" />
+          <textarea v-model="caracteristicasTexto" rows="4" placeholder="Diseño responsivo&#10;SEO optimizado&#10;Panel de administración"
+            class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-violeta/50 text-white placeholder-gris-medio text-sm outline-none resize-none font-mono" />
         </div>
       </div>
-
       <template #footer>
         <AppBoton variante="fantasma" @click="modalForm = false">Cancelar</AppBoton>
         <AppBoton variante="primario" :cargando="guardando" @click="guardar">{{ editando ? 'Guardar cambios' : 'Crear servicio' }}</AppBoton>

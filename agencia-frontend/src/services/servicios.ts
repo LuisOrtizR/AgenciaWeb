@@ -1,8 +1,21 @@
-/**
- * services/autenticacion.ts
- */
 import api from './api'
-import type { RespuestaApi, RespuestaAuth, UsuarioConConteo } from '@/types'
+import type {
+  RespuestaApi, RespuestaPaginada,
+  RespuestaAuth, UsuarioConConteo,
+  DatosActualizarPerfil, DatosCambiarContrasena,
+  DatosCrearUsuario, DatosActualizarUsuario,
+  FiltrosUsuario, ResumenUsuarios, Usuario,
+  Servicio, DatosCrearServicio, DatosActualizarServicio, FiltrosServicio,
+  Prospecto, DatosCrearProspecto, DatosActualizarProspecto,
+  DatosActualizarEstadoProspecto, FiltrosProspecto, ResumenProspectos,
+  Proyecto, DatosCrearProyecto, DatosActualizarProyecto, FiltrosProyecto, TecnologiaConteo,
+  Cotizacion, DatosCrearCotizacion, DatosActualizarCotizacion,
+  DatosActualizarEstadoCotizacion, FiltrosCotizacion, ResumenCotizaciones,
+  Testimonio, DatosEnviarTestimonio, DatosCrearTestimonio,
+  DatosActualizarTestimonio, DatosModeracion, FiltrosTestimonio, ResumenTestimonios,
+  DatosChatMensaje, RespuestaChat, RespuestaPropuesta, RespuestaAnalisis,
+  DatosGenerarDescripcion, RespuestaDescripcion,
+} from '@/types'
 
 export const autenticacionServicio = {
   login: (datos: { correo: string; contrasena: string }) =>
@@ -16,23 +29,17 @@ export const autenticacionServicio = {
 
   refrescar: (tokenRefresco: string) =>
     api.post<RespuestaApi<{ tokenAcceso: string }>>('/autenticacion/refrescar', { tokenRefresco }),
+
+  olvidéContrasena: (correo: string) =>
+    api.post<RespuestaApi<{ mensaje: string }>>('/autenticacion/olvide-contrasena', { correo }),
+
+  resetContrasena: (datos: { token: string; contrasena: string }) =>
+    api.post<RespuestaApi<{ mensaje: string }>>('/autenticacion/reset-contrasena', datos),
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * services/usuarios.ts
- */
-import type {
-  RespuestaPaginada, UsuarioConConteo as UsuarioConteo,
-  DatosActualizarPerfil, DatosCambiarContrasena,
-  DatosCrearUsuario, DatosActualizarUsuario,
-  FiltrosUsuario, ResumenUsuarios, Usuario,
-} from '@/types'
 
 export const usuariosServicio = {
   perfil: () =>
-    api.get<RespuestaApi<UsuarioConteo>>('/usuarios/perfil'),
+    api.get<RespuestaApi<UsuarioConConteo>>('/usuarios/perfil'),
 
   actualizarPerfil: (datos: DatosActualizarPerfil) =>
     api.put<RespuestaApi<Usuario>>('/usuarios/perfil', datos),
@@ -44,10 +51,10 @@ export const usuariosServicio = {
     api.get<RespuestaApi<ResumenUsuarios>>('/usuarios/resumen'),
 
   listar: (filtros: FiltrosUsuario = {}) =>
-    api.get<RespuestaPaginada<UsuarioConteo>>('/usuarios', { params: filtros }),
+    api.get<RespuestaPaginada<UsuarioConConteo>>('/usuarios', { params: filtros }),
 
   obtenerPorId: (id: string) =>
-    api.get<RespuestaApi<UsuarioConteo>>(`/usuarios/${id}`),
+    api.get<RespuestaApi<UsuarioConConteo>>(`/usuarios/${id}`),
 
   crear: (datos: DatosCrearUsuario) =>
     api.post<RespuestaApi<Usuario>>('/usuarios', datos),
@@ -68,24 +75,13 @@ export const usuariosServicio = {
     api.delete<RespuestaApi<Usuario>>(`/usuarios/${id}`),
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * services/servicios.ts
- */
-import type {
-  Servicio, DatosCrearServicio, DatosActualizarServicio, FiltrosServicio,
-} from '@/types'
-
 export const serviciosServicio = {
-  // Públicas
   listar: (filtros: FiltrosServicio = {}) =>
     api.get<RespuestaPaginada<Servicio>>('/servicios', { params: filtros }),
 
   obtenerPorSlug: (slug: string) =>
     api.get<RespuestaApi<Servicio>>(`/servicios/slug/${slug}`),
 
-  // Admin
   listarAdmin: (filtros: FiltrosServicio = {}) =>
     api.get<RespuestaPaginada<Servicio>>('/servicios/admin', { params: filtros }),
 
@@ -108,22 +104,10 @@ export const serviciosServicio = {
     api.delete<RespuestaApi<Servicio>>(`/servicios/${id}`),
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * services/prospectos.ts
- */
-import type {
-  Prospecto, DatosCrearProspecto, DatosActualizarProspecto,
-  DatosActualizarEstadoProspecto, FiltrosProspecto, ResumenProspectos,
-} from '@/types'
-
 export const prospectosServicio = {
-  // Pública — formulario de contacto
   crear: (datos: DatosCrearProspecto) =>
     api.post<RespuestaApi<Prospecto>>('/prospectos', datos),
 
-  // Admin
   resumen: () =>
     api.get<RespuestaApi<ResumenProspectos>>('/prospectos/resumen'),
 
@@ -146,18 +130,7 @@ export const prospectosServicio = {
     api.delete<RespuestaApi<Prospecto>>(`/prospectos/${id}`),
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * services/proyectos.ts
- */
-import type {
-  Proyecto, DatosCrearProyecto, DatosActualizarProyecto,
-  FiltrosProyecto, TecnologiaConteo,
-} from '@/types'
-
 export const proyectosServicio = {
-  // Públicas
   listar: (filtros: FiltrosProyecto = {}) =>
     api.get<RespuestaPaginada<Proyecto>>('/proyectos', { params: filtros }),
 
@@ -170,7 +143,6 @@ export const proyectosServicio = {
   obtenerPorSlug: (slug: string) =>
     api.get<RespuestaApi<Proyecto>>(`/proyectos/slug/${slug}`),
 
-  // Admin
   obtenerPorId: (id: string) =>
     api.get<RespuestaApi<Proyecto>>(`/proyectos/${id}`),
 
@@ -186,7 +158,6 @@ export const proyectosServicio = {
   eliminar: (id: string) =>
     api.delete<RespuestaApi<Proyecto>>(`/proyectos/${id}`),
 
-  // Imágenes
   subirImagen: (id: string, archivo: File) => {
     const formData = new FormData()
     formData.append('imagen', archivo)
@@ -200,16 +171,6 @@ export const proyectosServicio = {
   eliminarImagen: (id: string) =>
     api.delete<RespuestaApi<{ id: string; titulo: string }>>(`/imagenes/proyectos/${id}`),
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * services/cotizaciones.ts
- */
-import type {
-  Cotizacion, DatosCrearCotizacion, DatosActualizarCotizacion,
-  DatosActualizarEstadoCotizacion, FiltrosCotizacion, ResumenCotizaciones,
-} from '@/types'
 
 export const cotizacionesServicio = {
   resumen: () =>
@@ -238,21 +199,16 @@ export const cotizacionesServicio = {
 
   eliminar: (id: string) =>
     api.delete<RespuestaApi<Cotizacion>>(`/cotizaciones/${id}`),
+
+  // ── Rutas de cliente ────────────────────────────────────────────
+  misCotizaciones: () =>
+    api.get<RespuestaApi<Cotizacion[]>>('/cotizaciones/mis-cotizaciones'),
+
+  responder: (id: string, estado: 'ACEPTADA' | 'RECHAZADA') =>
+    api.patch<RespuestaApi<Cotizacion>>(`/cotizaciones/${id}/responder`, { estado }),
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * services/testimonios.ts
- */
-import type {
-  Testimonio, DatosEnviarTestimonio, DatosCrearTestimonio,
-  DatosActualizarTestimonio, DatosModeracion,
-  FiltrosTestimonio, ResumenTestimonios,
-} from '@/types'
-
 export const testimoniosServicio = {
-  // Públicas
   enviar: (datos: DatosEnviarTestimonio) =>
     api.post<RespuestaApi<Testimonio>>('/testimonios', datos),
 
@@ -265,7 +221,6 @@ export const testimoniosServicio = {
   obtenerPorId: (id: string) =>
     api.get<RespuestaApi<Testimonio>>(`/testimonios/${id}`),
 
-  // Admin
   resumen: () =>
     api.get<RespuestaApi<ResumenTestimonios>>('/testimonios/resumen'),
 
@@ -288,23 +243,10 @@ export const testimoniosServicio = {
     api.delete<RespuestaApi<Testimonio>>(`/testimonios/${id}`),
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * services/ia.ts
- */
-import type {
-  DatosChatMensaje, RespuestaChat,
-  RespuestaPropuesta, RespuestaAnalisis,
-  DatosGenerarDescripcion, RespuestaDescripcion,
-} from '@/types'
-
 export const iaServicio = {
-  // Pública — widget de chat del sitio web
   chat: (datos: DatosChatMensaje) =>
     api.post<RespuestaApi<RespuestaChat>>('/ia/chat', datos),
 
-  // Admin
   generarPropuesta: (prospectoId: string) =>
     api.post<RespuestaApi<RespuestaPropuesta>>('/ia/propuesta', { prospectoId }),
 

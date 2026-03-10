@@ -1,6 +1,6 @@
-import { Request, Response }                         from 'express'
+import { Request, Response }                              from 'express'
 import { respuestaExito, respuestaError, respuestaPaginada } from '../../utilidades/respuesta.js'
-import { SolicitudAutenticada }                       from '../../tipos.js'
+import { SolicitudAutenticada }                              from '../../tipos.js'
 import {
   esquemaCrearCotizacion,
   esquemaActualizarCotizacion,
@@ -8,11 +8,6 @@ import {
   esquemaFiltrosCotizacion,
 } from './cotizaciones.tipos.js'
 import * as servicio from './cotizaciones.servicio.js'
-
-/**
- * Controladores del módulo de cotizaciones.
- * Todos los endpoints requieren ADMIN.
- */
 
 // GET /api/cotizaciones/resumen
 export const resumen = async (_req: Request, res: Response): Promise<void> => {
@@ -135,6 +130,41 @@ export const eliminar = async (req: Request, res: Response): Promise<void> => {
     respuestaExito(res, datos, 'Cotización eliminada exitosamente')
   } catch (error) {
     const mensaje = error instanceof Error ? error.message : 'Error al eliminar cotización'
+    respuestaError(res, mensaje, 400)
+  }
+}
+
+// GET /api/cotizaciones/mis-cotizaciones
+export const misCotizaciones = async (req: Request, res: Response): Promise<void> => {
+  const solicitud = req as SolicitudAutenticada
+  try {
+    const datos = await servicio.misCotizaciones(
+      solicitud.usuario!.correo,
+      solicitud.usuario!.id      // ← agregar esto
+    )
+    respuestaExito(res, datos)
+  } catch (error) {
+    const mensaje = error instanceof Error ? error.message : 'Error al obtener cotizaciones'
+    respuestaError(res, mensaje, 500)
+  }
+}
+
+// PATCH /api/cotizaciones/:id/responder
+export const responderCotizacion = async (req: Request, res: Response): Promise<void> => {
+  const solicitud  = req as SolicitudAutenticada
+  const id         = req.params['id'] as string
+  const { estado } = req.body
+
+  if (!['ACEPTADA', 'RECHAZADA'].includes(estado)) {
+    respuestaError(res, 'Estado inválido. Usa ACEPTADA o RECHAZADA', 400)
+    return
+  }
+
+  try {
+    const datos = await servicio.responderCotizacion(id, solicitud.usuario!.correo, estado)
+    respuestaExito(res, datos, `Cotización ${estado.toLowerCase()} exitosamente`)
+  } catch (error) {
+    const mensaje = error instanceof Error ? error.message : 'Error al responder cotización'
     respuestaError(res, mensaje, 400)
   }
 }

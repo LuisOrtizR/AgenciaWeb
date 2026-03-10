@@ -9,16 +9,18 @@ datasource db {
 
 
 model Usuario {
-  id            String       @id @default(uuid())
-  nombre        String
-  correo        String       @unique
-  contrasena    String
-  rol           RolUsuario   @default(CLIENTE)
-  telefono      String?
-  empresa       String?
-  activo        Boolean      @default(true)
-  creadoEn      DateTime     @default(now())
-  actualizadoEn DateTime     @updatedAt
+  id                String    @id @default(uuid())
+  nombre            String
+  correo            String    @unique
+  contrasena        String
+  rol               RolUsuario @default(CLIENTE)
+  telefono          String?
+  empresa           String?
+  activo            Boolean   @default(true)
+  tokenReset        String?
+  tokenResetExpira  DateTime?
+  creadoEn          DateTime  @default(now())
+  actualizadoEn     DateTime  @updatedAt
 
   prospectos   Prospecto[]
   cotizaciones Cotizacion[]
@@ -55,16 +57,16 @@ enum EstadoCotizacion {
 }
 
 model Servicio {
-  id              String     @id @default(uuid())
+  id              String   @id @default(uuid())
   nombre          String
-  slug            String     @unique
+  slug            String   @unique
   descripcion     String
   precioDesde     Int
   precioHasta     Int
   semanasEntrega  Int
   caracteristicas Json
-  activo          Boolean    @default(true)
-  creadoEn        DateTime   @default(now())
+  activo          Boolean  @default(true)
+  creadoEn        DateTime @default(now())
 
   proyectos    Proyecto[]
   cotizaciones Cotizacion[]
@@ -86,26 +88,26 @@ model Prospecto {
   creadoEn     DateTime        @default(now())
 
   usuarioId    String?
-  usuario      Usuario?    @relation(fields: [usuarioId], references: [id])
+  usuario      Usuario?     @relation(fields: [usuarioId], references: [id])
   cotizaciones Cotizacion[]
 
   @@map("prospectos")
 }
 
 model Proyecto {
-  id           String    @id @default(uuid())
+  id           String   @id @default(uuid())
   titulo       String
-  slug         String    @unique
+  slug         String   @unique
   descripcion  String
   stackTecnico Json
   imagenUrl    String?
   urlEnVivo    String?
   urlGithub    String?
-  destacado    Boolean   @default(false)
-  creadoEn     DateTime  @default(now())
+  destacado    Boolean  @default(false)
+  creadoEn     DateTime @default(now())
 
   servicioId  String?
-  servicio    Servicio?   @relation(fields: [servicioId], references: [id])
+  servicio    Servicio?    @relation(fields: [servicioId], references: [id])
   testimonios Testimonio[]
 
   @@map("proyectos")

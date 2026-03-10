@@ -1,10 +1,12 @@
-import { Request, Response }          from 'express'
+import { Request, Response }             from 'express'
 import { respuestaExito, respuestaError } from '../../utilidades/respuesta.js'
-import { SolicitudAutenticada }          from '../../tipos.js'
+import { SolicitudAutenticada }           from '../../tipos.js'
 import {
   esquemaRegistro,
   esquemaLogin,
   esquemaRefrescarToken,
+  esquemaSolicitarReset,
+  esquemaResetearContrasena,
 } from './autenticacion.tipos.js'
 import * as servicio from './autenticacion.servicio.js'
 
@@ -70,5 +72,40 @@ export const refrescarToken = async (req: Request, res: Response): Promise<void>
   } catch (error) {
     const mensaje = error instanceof Error ? error.message : 'Error al refrescar token'
     respuestaError(res, mensaje, 401)
+  }
+}
+
+// POST /api/autenticacion/olvide-contrasena
+// Solicita el envío del correo con el enlace de reset
+export const olvidéContrasena = async (req: Request, res: Response): Promise<void> => {
+  const resultado = esquemaSolicitarReset.safeParse(req.body)
+  if (!resultado.success) {
+    respuestaError(res, 'Correo inválido', 400)
+    return
+  }
+  try {
+    const datos = await servicio.solicitarReset(resultado.data)
+    // Siempre 200 para no revelar si el correo existe
+    respuestaExito(res, datos, datos.mensaje)
+  } catch (error) {
+    const mensaje = error instanceof Error ? error.message : 'Error al procesar solicitud'
+    respuestaError(res, mensaje, 500)
+  }
+}
+
+// POST /api/autenticacion/reset-contrasena
+// Recibe el token (query/body) y la nueva contraseña
+export const resetContrasena = async (req: Request, res: Response): Promise<void> => {
+  const resultado = esquemaResetearContrasena.safeParse(req.body)
+  if (!resultado.success) {
+    respuestaError(res, 'Datos inválidos', 400, resultado.error.flatten().fieldErrors)
+    return
+  }
+  try {
+    const datos = await servicio.resetearContrasena(resultado.data)
+    respuestaExito(res, datos, datos.mensaje)
+  } catch (error) {
+    const mensaje = error instanceof Error ? error.message : 'Error al resetear contraseña'
+    respuestaError(res, mensaje, 400)
   }
 }

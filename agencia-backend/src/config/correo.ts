@@ -35,6 +35,13 @@ export interface DatosBienvenidaCorreo {
   correo: string
 }
 
+// ← NUEVO
+export interface DatosResetCorreo {
+  nombre:   string
+  correo:   string
+  urlReset: string
+}
+
 const enviar = async (para: string, asunto: string, html: string): Promise<void> => {
   try {
     const { error } = await resend.emails.send({
@@ -229,4 +236,43 @@ export const enviarBienvenida = async (datos: DatosBienvenidaCorreo): Promise<vo
     </div>
   `
   await enviar(datos.correo, `¡Bienvenido/a a ${entorno.EMPRESA_NOMBRE}! 🎉`, plantillaBase(cuerpo, '¡Bienvenido/a! 🎉'))
+}
+
+// ─── NUEVO: Reset de contraseña ───────────────────────────────────────────────
+export const enviarResetContrasena = async (datos: DatosResetCorreo): Promise<void> => {
+  const cuerpo = `
+    <p style="color:#1e293b;font-size:16px;margin:0 0 12px;">Hola <strong>${datos.nombre}</strong>,</p>
+    <p style="color:#475569;font-size:15px;line-height:1.7;margin:0 0 20px;">
+      Recibimos una solicitud para restablecer la contraseña de tu cuenta.
+      Si no fuiste tú, ignora este correo — tu contraseña no cambiará.
+    </p>
+
+    <div style="text-align:center;margin:28px 0;">
+      <a
+        href="${datos.urlReset}"
+        style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-decoration:none;
+               font-size:15px;font-weight:700;padding:14px 32px;border-radius:12px;
+               box-shadow:0 4px 14px rgba(124,58,237,.4);"
+      >
+        Restablecer contraseña
+      </a>
+    </div>
+
+    <div style="background:#fffbeb;border-left:4px solid #f59e0b;border-radius:0 8px 8px 0;padding:14px 18px;margin-bottom:20px;">
+      <p style="margin:0;color:#92400e;font-size:14px;line-height:1.6;">
+        ⏱ <strong>Este enlace expira en 1 hora.</strong><br>
+        Si expiró, solicita uno nuevo desde la página de login.
+      </p>
+    </div>
+
+    <p style="color:#94a3b8;font-size:13px;margin:0;">
+      Si el botón no funciona, copia y pega este enlace en tu navegador:<br>
+      <a href="${datos.urlReset}" style="color:#7c3aed;word-break:break-all;">${datos.urlReset}</a>
+    </p>
+  `
+  await enviar(
+    datos.correo,
+    `🔐 Restablecer contraseña — ${entorno.EMPRESA_NOMBRE}`,
+    plantillaBase(cuerpo, '🔐 Recuperar Contraseña')
+  )
 }

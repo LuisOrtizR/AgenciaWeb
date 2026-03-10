@@ -229,3 +229,65 @@ export const eliminarCotizacion = async (id: string) => {
   await prisma.cotizacion.delete({ where: { id } })
   return cotizacion
 }
+
+// ─── Mis cotizaciones — cliente ───────────────────────────────────────────────
+export const misCotizaciones = async (correoUsuario: string, usuarioId: string) => {
+  const prospectos = await prisma.prospecto.findMany({
+    where: {
+      OR: [
+        { correo:    correoUsuario },
+        { usuarioId: usuarioId    },
+      ],
+    },
+    select: { id: true, correo: true, usuarioId: true },  // ← agregar correo y usuarioId
+  })
+
+  console.log('Prospectos encontrados:', prospectos)
+  const ids = prospectos.map(p => p.id)
+  if (ids.length === 0) return []
+
+  return prisma.cotizacion.findMany({
+    where:   { prospectoId: { in: ids } },
+    orderBy: { creadoEn: 'desc' },
+    include: incluirRelaciones,
+  })
+}
+
+// ─── Responder cotización — cliente (ACEPTAR o RECHAZAR) ─────────────────────
+export const responderCotizacion = async (
+  id:             string,
+  correoUsuario:  string,
+  estado:         'ACEPTADA' | 'RECHAZADA'
+) => {
+  const cotizacion = await obtenerCotizacionPorId(id)
+
+  if (cotizacion.prospecto.correo !== correoUsuario) {
+    throw new Error('No tienes permiso para responder esta cotización')
+  }
+
+  if (cotizacion.estado !== 'ENVIADA') {
+    throw new Error('Solo puedes responder cotizaciones en estado ENVIADA')
+  }
+
+  const actualizada = await prisma.cotizacion.update({
+    where:   { id },
+    data:    { estado },
+    include: incluirRelaciones,
+  })
+
+  if (estado === 'ACEPTADA') {
+    await prisma.prospecto.update({
+      where: { id: cotizacion.prospectoId },
+      data:  { estado: 'CONVERTIDO' },
+    })
+  }
+
+  if (estado === 'RECHAZADA') {
+    await prisma.prospecto.update({
+      where: { id: cotizacion.prospectoId },
+      data:  { estado: 'PERDIDO' },
+    })
+  }
+
+  return actualizada
+}

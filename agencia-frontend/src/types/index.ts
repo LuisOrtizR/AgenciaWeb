@@ -1,11 +1,7 @@
-// ─── Enums ────────────────────────────────────────────────────────────────────
-
 export type RolUsuario       = 'ADMIN' | 'CLIENTE'
 export type EstadoProspecto  = 'NUEVO' | 'CONTACTADO' | 'CONVERTIDO' | 'PERDIDO'
 export type TipoServicio     = 'LANDING' | 'CORPORATIVO' | 'ECOMMERCE' | 'SAAS' | 'MANTENIMIENTO'
 export type EstadoCotizacion = 'PENDIENTE' | 'ENVIADA' | 'ACEPTADA' | 'RECHAZADA'
-
-// ─── API genérica ─────────────────────────────────────────────────────────────
 
 export interface RespuestaApi<T> {
   exito:   boolean
@@ -21,29 +17,30 @@ export interface Paginacion {
 }
 
 export interface RespuestaPaginada<T> {
-  exito:     boolean
-  mensaje:   string
-  datos:     T[]
+  exito:      boolean
+  mensaje:    string
+  datos:      T[]
   paginacion: Paginacion
 }
 
-// ─── Usuario ──────────────────────────────────────────────────────────────────
-
 export interface Usuario {
-  id:        string
-  nombre:    string
-  correo:    string
-  rol:       RolUsuario
-  activo:    boolean
-  avatarUrl: string | null
-  creadoEn:  string
+  id:            string
+  nombre:        string
+  correo:        string
+  rol:           RolUsuario
+  activo:        boolean
+  avatarUrl:     string | null
+  telefono:      string | null
+  empresa:       string | null
+  creadoEn:      string
   actualizadoEn: string
 }
 
 export interface UsuarioConConteo extends Usuario {
   _count?: {
-    prospectos:  number
+    prospectos:   number
     cotizaciones: number
+    testimonios:  number
   }
 }
 
@@ -54,16 +51,14 @@ export interface ResumenUsuarios {
   activos:  number
 }
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
-
 export interface DatosLogin {
-  correo:    string
+  correo:     string
   contrasena: string
 }
 
 export interface DatosRegistro {
-  nombre:    string
-  correo:    string
+  nombre:     string
+  correo:     string
   contrasena: string
 }
 
@@ -76,20 +71,29 @@ export interface RespuestaAuth {
 export interface DatosActualizarPerfil {
   nombre?:    string
   avatarUrl?: string | null
+  telefono?:  string | null
+  empresa?:   string | null
 }
 
 export interface DatosCambiarContrasena {
   contrasenaActual: string
-  nuevaContrasena:  string
+  contrasenaNueva:  string
 }
 
-// ─── Tipos de usuario CRUD (admin) ────────────────────────────────────────────
+export interface DatosSolicitarReset {
+  correo: string
+}
+
+export interface DatosResetearContrasena {
+  token:      string
+  contrasena: string
+}
 
 export interface DatosCrearUsuario {
-  nombre:    string
-  correo:    string
+  nombre:     string
+  correo:     string
   contrasena: string
-  rol?:      RolUsuario
+  rol?:       RolUsuario
 }
 
 export interface DatosActualizarUsuario {
@@ -101,14 +105,12 @@ export interface DatosActualizarUsuario {
 }
 
 export interface FiltrosUsuario {
-  pagina?:   number
+  pagina?:    number
   porPagina?: number
-  busqueda?: string
-  rol?:      RolUsuario
-  activo?:   boolean
+  busqueda?:  string
+  rol?:       RolUsuario
+  activo?:    boolean
 }
-
-// ─── Servicio ─────────────────────────────────────────────────────────────────
 
 export interface Servicio {
   id:              string
@@ -157,23 +159,21 @@ export interface FiltrosServicio {
   activo?:    boolean
 }
 
-// ─── Prospecto ────────────────────────────────────────────────────────────────
-
 export interface Prospecto {
-  id:           string
-  nombre:       string
-  correo:       string
-  telefono:     string | null
-  mensaje:      string | null
-  tipoServicio: TipoServicio
-  presupuesto:  number | null
-  estado:       EstadoProspecto
-  notas:        string | null
-  fuente:       string | null
-  usuarioId:    string | null
-  usuario?:     Usuario | null
+  id:            string
+  nombre:        string
+  correo:        string
+  telefono:      string | null
+  mensaje:       string | null
+  tipoServicio:  TipoServicio
+  presupuesto:   number | null
+  estado:        EstadoProspecto
+  notas:         string | null
+  fuente:        string | null
+  usuarioId:     string | null
+  usuario?:      Usuario | null
   cotizaciones?: Cotizacion[]
-  creadoEn:     string
+  creadoEn:      string
   actualizadoEn: string
 }
 
@@ -185,7 +185,6 @@ export interface DatosCrearProspecto {
   tipoServicio: TipoServicio
   presupuesto?: number | null
   fuente?:      string | null
-  // honeypot
   website?:     string
 }
 
@@ -214,29 +213,27 @@ export interface FiltrosProspecto {
 }
 
 export interface ResumenProspectos {
-  total:      number
-  nuevos:     number
+  total:       number
+  nuevos:      number
   contactados: number
   convertidos: number
-  perdidos:   number
+  perdidos:    number
 }
 
-// ─── Proyecto ─────────────────────────────────────────────────────────────────
-
 export interface Proyecto {
-  id:           string
-  titulo:       string
-  slug:         string
-  descripcion:  string
-  stackTecnico: string[]
-  imagenUrl:    string | null
-  urlEnVivo:    string | null
-  urlGithub:    string | null
-  destacado:    boolean
-  servicio?:    Servicio | null
-  servicioId:   string | null
-  testimonios?: Testimonio[]
-  creadoEn:     string
+  id:            string
+  titulo:        string
+  slug:          string
+  descripcion:   string
+  stackTecnico:  string[]
+  imagenUrl:     string | null
+  urlEnVivo:     string | null
+  urlGithub:     string | null
+  destacado:     boolean
+  servicio?:     Servicio | null
+  servicioId:    string | null
+  testimonios?:  Testimonio[]
+  creadoEn:      string
   actualizadoEn?: string
 }
 
@@ -244,7 +241,6 @@ export interface DatosCrearProyecto {
   titulo:       string
   slug:         string
   descripcion:  string
-  // ✅ Requerido con valor por defecto [] — nunca undefined
   stackTecnico: string[]
   imagenUrl?:   string | null
   urlEnVivo?:   string | null
@@ -279,21 +275,19 @@ export interface TecnologiaConteo {
   cantidad:   number
 }
 
-// ─── Cotización ───────────────────────────────────────────────────────────────
-
 export interface Cotizacion {
-  id:          string
-  precioTotal: number
-  estado:      EstadoCotizacion
-  extras:      string[]
-  notas:       string | null
-  prospecto:   Prospecto
-  prospectoId: string
-  servicio:    Servicio
-  servicioId:  string
-  usuario?:    Usuario | null
-  usuarioId:   string | null
-  creadoEn:    string
+  id:            string
+  precioTotal:   number
+  estado:        EstadoCotizacion
+  extras:        string[]
+  notas:         string | null
+  prospecto:     Prospecto
+  prospectoId:   string
+  servicio:      Servicio
+  servicioId:    string
+  usuario?:      Usuario | null
+  usuarioId:     string | null
+  creadoEn:      string
   actualizadoEn: string
 }
 
@@ -318,29 +312,27 @@ export interface DatosActualizarEstadoCotizacion {
 }
 
 export interface FiltrosCotizacion {
-  pagina?:    number
-  porPagina?: number
-  busqueda?:  string
-  estado?:    EstadoCotizacion
+  pagina?:     number
+  porPagina?:  number
+  busqueda?:   string
+  estado?:     EstadoCotizacion
   servicioId?: string
 }
 
 export interface ResumenCotizaciones {
-  total:     number
-  pendientes: number
-  enviadas:  number
-  aceptadas: number
-  rechazadas: number
+  total:           number
+  pendientes:      number
+  enviadas:        number
+  aceptadas:       number
+  rechazadas:      number
   ingresosTotales: number
 }
 
-// ─── Testimonio ───────────────────────────────────────────────────────────────
-
 export interface Testimonio {
   id:            string
-  nombreCliente: string   // ← no 'nombre'
+  nombreCliente: string
   empresa:       string | null
-  contenido:     string   // ← no 'texto'
+  contenido:     string
   calificacion:  number
   visible:       boolean
   proyectoId:    string | null
@@ -383,16 +375,14 @@ export interface FiltrosTestimonio {
 }
 
 export interface ResumenTestimonios {
-  total:    number
-  visibles: number
-  ocultos:  number
+  total:                number
+  visibles:             number
+  ocultos:              number
   calificacionPromedio: number
 }
 
-// ─── IA ───────────────────────────────────────────────────────────────────────
-
 export interface MensajeChat {
-  rol:      'user' | 'assistant'
+  rol:       'user' | 'assistant'
   contenido: string
 }
 
@@ -411,12 +401,12 @@ export interface RespuestaPropuesta {
 
 export interface RespuestaAnalisis {
   analisis: {
-    puntaje:              number
-    nivel:                string
-    resumen:              string
-    fortalezas:           string[]
-    riesgos:              string[]
-    accionesRecomendadas: string[]
+    puntaje:                 number
+    nivel:                   string
+    resumen:                 string
+    fortalezas:              string[]
+    riesgos:                 string[]
+    accionesRecomendadas:    string[]
     tiempoSugeridoRespuesta: string
   }
 }
@@ -438,8 +428,6 @@ export interface RespuestaDescripcion {
   tokens: number
 }
 
-// ─── UI ───────────────────────────────────────────────────────────────────────
-
 export type VarianteNotificacion = 'exito' | 'error' | 'advertencia' | 'info'
 
 export interface Notificacion {
@@ -451,8 +439,8 @@ export interface Notificacion {
 }
 
 export interface OpcionesPaginacion {
-  pagina:     number
-  porPagina:  number
-  total:      number
+  pagina:       number
+  porPagina:    number
+  total:        number
   totalPaginas: number
 }

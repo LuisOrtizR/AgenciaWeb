@@ -26,8 +26,6 @@ const formularioEstado = ref<DatosActualizarEstadoProspecto>({
   notas:  null,
 })
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 type VarianteInsignia = 'info' | 'advertencia' | 'exito' | 'error' | 'neutro'
 
 const varianteEstado = (e: EstadoProspecto): VarianteInsignia => ({
@@ -68,10 +66,7 @@ const formatearMoneda = (m: number) =>
 const formatearFechaCorta = (f: string) =>
   new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(f))
 
-const inicialNombre = (nombre: string) =>
-  nombre[0]?.toUpperCase() ?? '?'
-
-// ─── Carga ───────────────────────────────────────────────────────────────────
+const inicialNombre = (nombre: string) => nombre[0]?.toUpperCase() ?? '?'
 
 const cargar = async () => {
   cargando.value = true
@@ -87,8 +82,6 @@ const cargar = async () => {
 }
 
 onMounted(cargar)
-
-// ─── Acciones ────────────────────────────────────────────────────────────────
 
 const ESTADOS: EstadoProspecto[] = ['NUEVO', 'CONTACTADO', 'CONVERTIDO', 'PERDIDO']
 
@@ -121,7 +114,6 @@ const cambioRapidoEstado = async (estado: EstadoProspecto) => {
   }
 }
 
-// ── IA: analizar prospecto ───────────────────────────────────────────────────
 const analizarConIA = async () => {
   if (!prospecto.value) return
   resultadoIA.value   = ''
@@ -138,13 +130,13 @@ const analizarConIA = async () => {
       a.resumen,
       '',
       '✅ FORTALEZAS',
-      ...a.fortalezas.map(f => `• ${f}`),
+      ...a.fortalezas.map((f: string) => `• ${f}`),
       '',
       '⚠️ RIESGOS',
-      ...a.riesgos.map(r => `• ${r}`),
+      ...a.riesgos.map((r: string) => `• ${r}`),
       '',
       '🎯 ACCIONES RECOMENDADAS',
-      ...a.accionesRecomendadas.map(ac => `• ${ac}`),
+      ...a.accionesRecomendadas.map((ac: string) => `• ${ac}`),
       '',
       `⏱ TIEMPO SUGERIDO DE RESPUESTA: ${a.tiempoSugeridoRespuesta}`,
     ].join('\n')
@@ -156,7 +148,6 @@ const analizarConIA = async () => {
   }
 }
 
-// ── IA: generar propuesta ────────────────────────────────────────────────────
 const generarPropuesta = async () => {
   if (!prospecto.value) return
   propuestaIA.value    = ''
@@ -182,7 +173,6 @@ const copiarPropuesta = async () => {
   }
 }
 
-// ── Eliminar ─────────────────────────────────────────────────────────────────
 const eliminar = async () => {
   if (!prospecto.value || !confirm(`¿Eliminar el prospecto de ${prospecto.value.nombre}?`)) return
   try {
@@ -198,10 +188,8 @@ const eliminar = async () => {
 <template>
   <div class="space-y-6 max-w-5xl mx-auto">
 
-    <!-- Navegación atrás -->
     <div class="flex items-center gap-3">
-      <RouterLink :to="{ name: 'admin-prospectos' }"
-        class="flex items-center gap-1.5 text-sm text-gris-medio hover:text-white transition-colors">
+      <RouterLink :to="{ name: 'admin-prospectos' }" class="flex items-center gap-1.5 text-sm text-gris-medio hover:text-white transition-colors">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg>
@@ -209,7 +197,6 @@ const eliminar = async () => {
       </RouterLink>
     </div>
 
-    <!-- Skeleton -->
     <div v-if="cargando" class="space-y-4">
       <div class="h-32 bg-white/5 rounded-2xl animate-pulse" />
       <div class="grid grid-cols-3 gap-4">
@@ -219,24 +206,20 @@ const eliminar = async () => {
 
     <template v-else-if="prospecto">
 
-      <!-- Header -->
       <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div class="flex items-start gap-4">
-          <div class="w-14 h-14 rounded-2xl bg-linear-to-br from-violeta/30 to-indigo-500/20 flex items-center justify-center text-2xl font-black text-violeta-claro shrink-0">
+          <div class="w-14 h-14 rounded-2xl bg-linear-to-brrom-violeta/30 to-indigo-500/20 flex items-center justify-center text-2xl font-black text-violeta-claro shrink-0">
             {{ inicialNombre(prospecto.nombre) }}
           </div>
           <div>
             <h1 class="text-2xl font-black text-white">{{ prospecto.nombre }}</h1>
             <p class="text-gris-medio text-sm mt-0.5">{{ prospecto.correo }}</p>
             <div class="flex items-center gap-2 mt-2">
-              <AppInsignia :variante="varianteEstado(prospecto.estado)" punto>
-                {{ etiquetaEstado(prospecto.estado) }}
-              </AppInsignia>
+              <AppInsignia :variante="varianteEstado(prospecto.estado)" punto>{{ etiquetaEstado(prospecto.estado) }}</AppInsignia>
               <AppInsignia variante="neutro">{{ etiquetaTipo(prospecto.tipoServicio) }}</AppInsignia>
             </div>
           </div>
         </div>
-
         <div class="flex flex-wrap items-center gap-2 shrink-0">
           <AppBoton variante="secundario" tamano="sm" @click="abrirModalEstado">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -265,13 +248,10 @@ const eliminar = async () => {
         </div>
       </div>
 
-      <!-- Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-        <!-- Columna principal -->
         <div class="lg:col-span-2 space-y-5">
 
-          <!-- Información de contacto -->
           <div class="bg-[#13151f] border border-white/5 rounded-2xl p-5 space-y-4">
             <h2 class="text-sm font-semibold text-white">Información de contacto</h2>
             <div class="grid grid-cols-2 gap-4 text-sm">
@@ -302,13 +282,11 @@ const eliminar = async () => {
             </div>
           </div>
 
-          <!-- Mensaje -->
           <div v-if="prospecto.mensaje" class="bg-[#13151f] border border-white/5 rounded-2xl p-5">
             <h2 class="text-sm font-semibold text-white mb-3">Mensaje del prospecto</h2>
             <p class="text-gris-medio text-sm leading-relaxed">{{ prospecto.mensaje }}</p>
           </div>
 
-          <!-- Notas internas -->
           <div v-if="prospecto.notas" class="bg-[#13151f] border border-amarillo/20 rounded-2xl p-5">
             <div class="flex items-center gap-2 mb-3">
               <svg class="w-4 h-4 text-amarillo" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -319,7 +297,6 @@ const eliminar = async () => {
             <p class="text-blanco-suave text-sm leading-relaxed">{{ prospecto.notas }}</p>
           </div>
 
-          <!-- Cotizaciones -->
           <div class="bg-[#13151f] border border-white/5 rounded-2xl overflow-hidden">
             <div class="flex items-center justify-between px-5 py-4 border-b border-white/5">
               <h2 class="text-sm font-semibold text-white">Cotizaciones asociadas</h2>
@@ -329,8 +306,7 @@ const eliminar = async () => {
               Sin cotizaciones aún
             </div>
             <ul v-else class="divide-y divide-white/5">
-              <li v-for="c in prospecto.cotizaciones" :key="c.id"
-                class="flex items-center justify-between px-5 py-3.5 hover:bg-white/2 transition-colors">
+              <li v-for="c in prospecto.cotizaciones" :key="c.id" class="flex items-center justify-between px-5 py-3.5 hover:bg-white/2 transition-colors">
                 <div class="flex items-center gap-3">
                   <AppInsignia :variante="varianteCotizacion(c.estado)" punto>
                     {{ c.estado.charAt(0) + c.estado.slice(1).toLowerCase() }}
@@ -339,8 +315,7 @@ const eliminar = async () => {
                 </div>
                 <div class="flex items-center gap-3">
                   <span class="text-xs text-gris-medio">{{ formatearFechaCorta(c.creadoEn) }}</span>
-                  <RouterLink :to="{ name: 'admin-cotizacion-detalle', params: { id: c.id } }"
-                    class="p-1.5 rounded-lg text-gris-medio hover:text-white hover:bg-white/5 transition-all">
+                  <RouterLink :to="{ name: 'admin-cotizacion-detalle', params: { id: c.id } }" class="p-1.5 rounded-lg text-gris-medio hover:text-white hover:bg-white/5 transition-all">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                     </svg>
@@ -351,26 +326,28 @@ const eliminar = async () => {
           </div>
         </div>
 
-        <!-- Columna derecha -->
         <div class="space-y-5">
 
-          <!-- Cambio rápido de estado -->
           <div class="bg-[#13151f] border border-white/5 rounded-2xl p-5 space-y-3">
             <h2 class="text-sm font-semibold text-white">Estado del prospecto</h2>
             <div class="space-y-2">
-              <button v-for="estado in ESTADOS" :key="estado"
+              <button
+                v-for="estado in ESTADOS"
+                :key="estado"
                 class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all"
                 :class="prospecto.estado === estado
                   ? 'bg-violeta/20 border border-violeta/30 text-violeta-claro'
                   : 'text-gris-medio hover:text-white hover:bg-white/5'"
-                @click="cambioRapidoEstado(estado)">
+                @click="cambioRapidoEstado(estado)"
+              >
                 <span class="w-2 h-2 rounded-full shrink-0"
                   :class="{
                     'bg-blue-400':   estado === 'NUEVO',
                     'bg-yellow-400': estado === 'CONTACTADO',
                     'bg-green-400':  estado === 'CONVERTIDO',
                     'bg-red-400':    estado === 'PERDIDO',
-                  }" />
+                  }"
+                />
                 {{ etiquetaEstado(estado) }}
                 <svg v-if="prospecto.estado === estado" class="w-3.5 h-3.5 ml-auto text-violeta-claro" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
@@ -379,7 +356,6 @@ const eliminar = async () => {
             </div>
           </div>
 
-          <!-- Herramientas IA -->
           <div class="bg-[#13151f] border border-white/5 rounded-2xl p-5 space-y-3">
             <h2 class="text-sm font-semibold text-white flex items-center gap-2">
               <svg class="w-4 h-4 text-violeta-claro" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -407,7 +383,6 @@ const eliminar = async () => {
             </button>
           </div>
 
-          <!-- Usuario asignado -->
           <div class="bg-[#13151f] border border-white/5 rounded-2xl p-5">
             <h2 class="text-sm font-semibold text-white mb-3">Asignado a</h2>
             <div v-if="prospecto.usuario" class="flex items-center gap-3">
@@ -422,7 +397,6 @@ const eliminar = async () => {
             <p v-else class="text-sm text-gris-medio">Sin asignar</p>
           </div>
 
-          <!-- Fechas -->
           <div class="bg-[#13151f] border border-white/5 rounded-2xl p-5 space-y-3 text-xs text-gris-medio">
             <div class="flex justify-between">
               <span>Registrado</span>
@@ -433,20 +407,17 @@ const eliminar = async () => {
       </div>
     </template>
 
-    <!-- ── Modal: cambiar estado ─────────────────────────────────────────── -->
     <AppModal :abierto="modalEstado" titulo="Cambiar estado" tamano="sm" @cerrar="modalEstado = false">
       <div class="space-y-4">
         <div class="space-y-1.5">
           <label class="block text-sm font-medium text-blanco-suave">Nuevo estado</label>
-          <select v-model="formularioEstado.estado"
-            class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-violeta/50 text-white text-sm outline-none">
+          <select v-model="formularioEstado.estado" class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-violeta/50 text-white text-sm outline-none">
             <option v-for="e in ESTADOS" :key="e" :value="e">{{ etiquetaEstado(e) }}</option>
           </select>
         </div>
         <div class="space-y-1.5">
           <label class="block text-sm font-medium text-blanco-suave">Notas internas</label>
-          <textarea v-model="formularioEstado.notas" rows="3" placeholder="Observaciones..."
-            class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-violeta/50 text-white placeholder-gris-medio text-sm outline-none resize-none" />
+          <textarea v-model="formularioEstado.notas" rows="3" placeholder="Observaciones..." class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-violeta/50 text-white placeholder-gris-medio text-sm outline-none resize-none" />
         </div>
       </div>
       <template #footer>
@@ -455,10 +426,9 @@ const eliminar = async () => {
       </template>
     </AppModal>
 
-    <!-- ── Modal: análisis IA ────────────────────────────────────────────── -->
     <AppModal :abierto="modalAnalisis" titulo="🤖 Análisis IA del prospecto" tamano="md" @cerrar="modalAnalisis = false">
       <div v-if="prospecto" class="flex items-center gap-3 mb-5 pb-4 border-b border-white/5">
-        <div class="w-10 h-10 rounded-full bg-linear-to-br from-violeta/30 to-indigo-500/20 flex items-center justify-center text-sm font-bold text-violeta-claro shrink-0">
+        <div class="w-10 h-10 rounded-full bg-linear-to-brrom-violeta/30 to-indigo-500/20 flex items-center justify-center text-sm font-bold text-violeta-claro shrink-0">
           {{ inicialNombre(prospecto.nombre) }}
         </div>
         <div>
@@ -483,7 +453,6 @@ const eliminar = async () => {
       </template>
     </AppModal>
 
-    <!-- ── Modal: propuesta IA ───────────────────────────────────────────── -->
     <AppModal :abierto="modalPropuesta" titulo="📄 Propuesta comercial con IA" tamano="lg" @cerrar="modalPropuesta = false">
       <div v-if="prospecto" class="flex items-center gap-3 mb-5 pb-4 border-b border-white/5">
         <div class="w-10 h-10 rounded-full bg-linear-to-br from-verde/20 to-emerald-500/10 flex items-center justify-center text-sm font-bold text-verde shrink-0">
@@ -524,6 +493,5 @@ const eliminar = async () => {
         </AppBoton>
       </template>
     </AppModal>
-
   </div>
 </template>

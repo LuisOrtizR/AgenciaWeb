@@ -12,11 +12,11 @@ import type { UsuarioConConteo, RolUsuario } from '@/types'
 const uiStore = useUiStore()
 const pag     = usePaginacion(12)
 
-const usuarios    = ref<UsuarioConConteo[]>([])
-const cargando    = ref(true)
+const usuarios     = ref<UsuarioConConteo[]>([])
+const cargando     = ref(true)
 const usuarioSelec = ref<UsuarioConConteo | null>(null)
-const modalRol    = ref(false)
-const nuevoRol    = ref<RolUsuario>('CLIENTE')
+const modalRol     = ref(false)
+const nuevoRol     = ref<RolUsuario>('CLIENTE')
 
 const filtros = reactive({
   busqueda: '',
@@ -27,22 +27,34 @@ const filtros = reactive({
 const cargar = async () => {
   cargando.value = true
   try {
-    const params: Record<string, unknown> = { pagina: pag.paginaActual.value, porPagina: pag.porPagina.value }
+    const params: Record<string, unknown> = {
+      pagina:    pag.paginaActual.value,
+      porPagina: pag.porPagina.value,
+    }
     if (filtros.busqueda) params.busqueda = filtros.busqueda
     if (filtros.activo)   params.activo   = filtros.activo
     if (filtros.rol)      params.rol      = filtros.rol
     const { data } = await usuariosServicio.listar(params as any)
     usuarios.value = data.datos
     pag.actualizarPaginacion(data.paginacion)
-  } catch { uiStore.error('Error', 'No se pudieron cargar los usuarios') }
-  finally { cargando.value = false }
+  } catch {
+    uiStore.error('Error', 'No se pudieron cargar los usuarios')
+  } finally {
+    cargando.value = false
+  }
 }
 
 onMounted(cargar)
-watch([filtros, () => pag.paginaActual.value], () => {
-  if (pag.paginaActual.value !== 1) pag.reiniciar()
-  else cargar()
+
+watch(filtros, () => {
+  pag.paginaActual.value = 1
+  cargar()
 }, { deep: true })
+
+const cambiarPagina = (pagina: number) => {
+  pag.irAPagina(pagina)
+  cargar()
+}
 
 const toggleActivo = async (u: UsuarioConConteo) => {
   try {
@@ -50,7 +62,9 @@ const toggleActivo = async (u: UsuarioConConteo) => {
     else          await usuariosServicio.activar(u.id)
     uiStore.exito(u.activo ? 'Usuario desactivado' : 'Usuario activado')
     cargar()
-  } catch { uiStore.error('Error', 'No se pudo actualizar el estado') }
+  } catch {
+    uiStore.error('Error', 'No se pudo actualizar el estado')
+  }
 }
 
 const abrirModalRol = (u: UsuarioConConteo) => {
@@ -66,7 +80,9 @@ const guardarRol = async () => {
     uiStore.exito('Rol actualizado', `${usuarioSelec.value.nombre} ahora es ${nuevoRol.value}`)
     modalRol.value = false
     cargar()
-  } catch { uiStore.error('Error', 'No se pudo cambiar el rol') }
+  } catch {
+    uiStore.error('Error', 'No se pudo cambiar el rol')
+  }
 }
 
 const formatearFecha = (f: string) =>
@@ -78,12 +94,12 @@ const iniciales = (nombre: string) =>
 
 <template>
   <div class="space-y-6 max-w-6xl mx-auto">
+
     <div>
       <h1 class="text-2xl font-bold text-white">Usuarios</h1>
       <p class="text-gris-medio text-sm mt-1">Gestiona las cuentas y roles del sistema</p>
     </div>
 
-    <!-- Filtros -->
     <div class="bg-[#13151f] border border-white/5 rounded-2xl p-4 flex flex-col sm:flex-row gap-3">
       <div class="flex-1 relative">
         <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gris-medio pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,7 +120,6 @@ const iniciales = (nombre: string) =>
       </select>
     </div>
 
-    <!-- Tabla -->
     <div class="bg-[#13151f] border border-white/5 rounded-2xl overflow-hidden">
       <div v-if="cargando" class="p-8 space-y-3">
         <div v-for="i in 6" :key="i" class="h-14 bg-white/5 rounded-xl animate-pulse" />
@@ -141,8 +156,8 @@ const iniciales = (nombre: string) =>
               </td>
               <td class="px-4 py-4 hidden md:table-cell">
                 <div class="flex items-center gap-3 text-xs text-gris-medio">
-                  <span>{{ u._count.prospectos }} prosp.</span>
-                  <span>{{ u._count.cotizaciones }} cotiz.</span>
+                  <span>{{ u._count?.prospectos ?? 0 }} prosp.</span>
+                  <span>{{ u._count?.cotizaciones ?? 0 }} cotiz.</span>
                 </div>
               </td>
               <td class="px-4 py-4">
@@ -167,7 +182,11 @@ const iniciales = (nombre: string) =>
                   <button class="p-1.5 rounded-lg text-gris-medio hover:text-violeta-claro hover:bg-violeta/10 transition-all" title="Cambiar rol" @click="abrirModalRol(u)">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                   </button>
-                  <button class="p-1.5 rounded-lg text-gris-medio hover:text-amarillo hover:bg-amarillo/10 transition-all" :title="u.activo ? 'Desactivar' : 'Activar'" @click="toggleActivo(u)">
+                  <button
+                    class="p-1.5 rounded-lg text-gris-medio hover:text-amarillo hover:bg-amarillo/10 transition-all"
+                    :title="u.activo ? 'Desactivar' : 'Activar'"
+                    @click="toggleActivo(u)"
+                  >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
                   </button>
                 </div>
@@ -178,11 +197,16 @@ const iniciales = (nombre: string) =>
       </div>
 
       <div v-if="pag.totalPaginas.value > 1" class="px-6 py-4 border-t border-white/5">
-        <AppPaginacion :pagina-actual="pag.paginaActual.value" :total-paginas="pag.totalPaginas.value" :total-registros="pag.totalRegistros.value" :por-pagina="pag.porPagina.value" @cambiar="pag.irAPagina" />
+        <AppPaginacion
+          :pagina-actual="pag.paginaActual.value"
+          :total-paginas="pag.totalPaginas.value"
+          :total-registros="pag.totalRegistros.value"
+          :por-pagina="pag.porPagina.value"
+          @cambiar="cambiarPagina"
+        />
       </div>
     </div>
 
-    <!-- Modal cambiar rol -->
     <AppModal :abierto="modalRol" titulo="Cambiar rol de usuario" tamano="sm" @cerrar="modalRol = false">
       <div class="space-y-4">
         <div v-if="usuarioSelec" class="p-3 rounded-xl bg-white/5 border border-white/5">

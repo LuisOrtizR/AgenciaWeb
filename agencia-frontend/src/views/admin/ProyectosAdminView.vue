@@ -4,7 +4,6 @@ import { useUiStore } from '@/stores/ui'
 import { proyectosServicio, serviciosServicio, iaServicio } from '@/services/servicios'
 import { usePaginacion } from '@/composables/usePaginacion'
 import AppBoton      from '@/components/ui/AppBoton.vue'
-import AppInput      from '@/components/ui/AppInput.vue'
 import AppModal      from '@/components/ui/AppModal.vue'
 import AppInsignia   from '@/components/ui/AppInsignia.vue'
 import AppPaginacion from '@/components/ui/AppPaginacion.vue'
@@ -13,16 +12,15 @@ import type { Proyecto, Servicio, DatosCrearProyecto } from '@/types'
 const uiStore = useUiStore()
 const pag     = usePaginacion(10)
 
-const proyectos    = ref<Proyecto[]>([])
-const servicios    = ref<Servicio[]>([])
-const cargando     = ref(true)
-const cargandoIA   = ref(false)
-const guardando    = ref(false)
-const modalForm    = ref(false)
-const editando     = ref<Proyecto | null>(null)
-const archivoImg   = ref<File | null>(null)
-
-const busqueda = ref('')
+const proyectos  = ref<Proyecto[]>([])
+const servicios  = ref<Servicio[]>([])
+const cargando   = ref(true)
+const cargandoIA = ref(false)
+const guardando  = ref(false)
+const modalForm  = ref(false)
+const editando   = ref<Proyecto | null>(null)
+const archivoImg = ref<File | null>(null)
+const busqueda   = ref('')
 
 const formulario = reactive<DatosCrearProyecto>({
   titulo:       '',
@@ -37,13 +35,11 @@ const formulario = reactive<DatosCrearProyecto>({
 })
 const stackTexto = ref('')
 
-// ─── Carga ───────────────────────────────────────────────────────────────────
-
 const cargar = async () => {
   cargando.value = true
   try {
     const params: Record<string, unknown> = {
-      pagina: pag.paginaActual.value,
+      pagina:    pag.paginaActual.value,
       porPagina: pag.porPagina.value,
     }
     if (busqueda.value) params.busqueda = busqueda.value
@@ -62,12 +58,16 @@ const cargar = async () => {
 }
 
 onMounted(cargar)
-watch([busqueda, () => pag.paginaActual.value], () => {
-  if (pag.paginaActual.value !== 1) pag.reiniciar()
-  else cargar()
+
+watch(busqueda, () => {
+  pag.paginaActual.value = 1
+  cargar()
 })
 
-// ─── Formulario ───────────────────────────────────────────────────────────────
+const cambiarPagina = (pagina: number) => {
+  pag.irAPagina(pagina)
+  cargar()
+}
 
 const resetFormulario = () => {
   Object.assign(formulario, {
@@ -108,10 +108,7 @@ const generarSlug = () => {
 }
 
 const procesarStack = () => {
-  formulario.stackTecnico = stackTexto.value
-    .split(',')
-    .map(s => s.trim())
-    .filter(Boolean)
+  formulario.stackTecnico = stackTexto.value.split(',').map(s => s.trim()).filter(Boolean)
 }
 
 const guardar = async () => {
@@ -123,7 +120,6 @@ const guardar = async () => {
   guardando.value = true
   try {
     let proyecto: Proyecto
-
     if (editando.value) {
       const { data } = await proyectosServicio.actualizar(editando.value.id, formulario)
       proyecto = data.datos
@@ -131,12 +127,9 @@ const guardar = async () => {
       const { data } = await proyectosServicio.crear(formulario)
       proyecto = data.datos
     }
-
-    // Subir imagen si se seleccionó
     if (archivoImg.value) {
       await proyectosServicio.subirImagen(proyecto.id, archivoImg.value)
     }
-
     uiStore.exito(editando.value ? 'Proyecto actualizado' : 'Proyecto creado')
     modalForm.value = false
     resetFormulario()
@@ -147,8 +140,6 @@ const guardar = async () => {
     guardando.value = false
   }
 }
-
-// ─── Acciones ─────────────────────────────────────────────────────────────────
 
 const toggleDestacado = async (p: Proyecto) => {
   try {
@@ -214,7 +205,6 @@ const manejarArchivoImg = (e: Event) => {
       </AppBoton>
     </div>
 
-    <!-- Búsqueda -->
     <div class="relative max-w-sm">
       <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gris-medio pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -223,7 +213,6 @@ const manejarArchivoImg = (e: Event) => {
         class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-violeta/50 text-white placeholder-gris-medio text-sm outline-none transition-all" />
     </div>
 
-    <!-- Grid de proyectos -->
     <div v-if="cargando" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
       <div v-for="i in 6" :key="i" class="h-56 bg-white/5 rounded-2xl animate-pulse" />
     </div>
@@ -239,7 +228,6 @@ const manejarArchivoImg = (e: Event) => {
         :key="p.id"
         class="bg-[#13151f] border border-white/5 rounded-2xl overflow-hidden hover:border-white/10 transition-all group"
       >
-        <!-- Imagen / placeholder -->
         <div class="h-40 bg-linear-to-br from-violeta/10 to-indigo-500/10 relative overflow-hidden">
           <img v-if="p.imagenUrl" :src="p.imagenUrl" :alt="p.titulo" class="w-full h-full object-cover" />
           <div v-else class="w-full h-full flex items-center justify-center">
@@ -247,28 +235,18 @@ const manejarArchivoImg = (e: Event) => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
-          <!-- Badge destacado -->
           <div v-if="p.destacado" class="absolute top-3 right-3">
             <AppInsignia variante="violeta" punto>Destacado</AppInsignia>
           </div>
         </div>
 
-        <!-- Info -->
         <div class="p-5">
           <h3 class="font-semibold text-white text-sm truncate">{{ p.titulo }}</h3>
           <p class="text-xs text-gris-medio mt-1 line-clamp-2">{{ p.descripcion }}</p>
-
-          <!-- Stack -->
           <div class="flex flex-wrap gap-1.5 mt-3">
-            <span
-              v-for="tech in p.stackTecnico.slice(0, 4)"
-              :key="tech"
-              class="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-xs text-gris-medio"
-            >{{ tech }}</span>
+            <span v-for="tech in p.stackTecnico.slice(0, 4)" :key="tech" class="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-xs text-gris-medio">{{ tech }}</span>
             <span v-if="p.stackTecnico.length > 4" class="text-xs text-gris-medio">+{{ p.stackTecnico.length - 4 }}</span>
           </div>
-
-          <!-- Acciones -->
           <div class="flex items-center gap-2 mt-4 pt-4 border-t border-white/5">
             <button class="p-1.5 rounded-lg text-gris-medio hover:text-white hover:bg-white/5 transition-all" title="Editar" @click="abrirEditar(p)">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -293,14 +271,17 @@ const manejarArchivoImg = (e: Event) => {
     </div>
 
     <div v-if="pag.totalPaginas.value > 1" class="bg-[#13151f] border border-white/5 rounded-2xl px-6 py-4">
-      <AppPaginacion :pagina-actual="pag.paginaActual.value" :total-paginas="pag.totalPaginas.value"
-        :total-registros="pag.totalRegistros.value" :por-pagina="pag.porPagina.value" @cambiar="pag.irAPagina" />
+      <AppPaginacion
+        :pagina-actual="pag.paginaActual.value"
+        :total-paginas="pag.totalPaginas.value"
+        :total-registros="pag.totalRegistros.value"
+        :por-pagina="pag.porPagina.value"
+        @cambiar="cambiarPagina"
+      />
     </div>
 
-    <!-- Modal crear/editar -->
     <AppModal :abierto="modalForm" :titulo="editando ? 'Editar proyecto' : 'Nuevo proyecto'" tamano="lg" @cerrar="modalForm = false">
       <div class="space-y-5">
-        <!-- Título + slug -->
         <div class="grid grid-cols-2 gap-4">
           <div class="space-y-1.5">
             <label class="block text-sm font-medium text-blanco-suave">Título <span class="text-rojo">*</span></label>
@@ -318,12 +299,11 @@ const manejarArchivoImg = (e: Event) => {
           </div>
         </div>
 
-        <!-- Descripción + botón IA -->
         <div class="space-y-1.5">
           <div class="flex items-center justify-between">
             <label class="block text-sm font-medium text-blanco-suave">Descripción <span class="text-rojo">*</span></label>
             <button type="button"
-              class="flex items-center gap-1.5 text-xs text-violeta-claro hover:text-violeta transition-colors"
+              class="flex items-center gap-1.5 text-xs text-violeta-claro hover:text-violeta transition-colors disabled:opacity-50"
               :disabled="cargandoIA"
               @click="generarDescripcionIA"
             >
@@ -337,7 +317,6 @@ const manejarArchivoImg = (e: Event) => {
             class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-violeta/50 text-white placeholder-gris-medio text-sm outline-none resize-none" />
         </div>
 
-        <!-- Stack + Servicio -->
         <div class="grid grid-cols-2 gap-4">
           <div class="space-y-1.5">
             <label class="block text-sm font-medium text-blanco-suave">Tecnologías (separadas por coma)</label>
@@ -346,15 +325,13 @@ const manejarArchivoImg = (e: Event) => {
           </div>
           <div class="space-y-1.5">
             <label class="block text-sm font-medium text-blanco-suave">Servicio relacionado</label>
-            <select v-model="formulario.servicioId"
-              class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-violeta/50 text-blanco-suave text-sm outline-none">
+            <select v-model="formulario.servicioId" class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-violeta/50 text-blanco-suave text-sm outline-none">
               <option :value="null">Sin servicio</option>
               <option v-for="s in servicios" :key="s.id" :value="s.id">{{ s.nombre }}</option>
             </select>
           </div>
         </div>
 
-        <!-- URLs -->
         <div class="grid grid-cols-2 gap-4">
           <div class="space-y-1.5">
             <label class="block text-sm font-medium text-blanco-suave">URL en vivo</label>
@@ -368,11 +345,12 @@ const manejarArchivoImg = (e: Event) => {
           </div>
         </div>
 
-        <!-- Imagen + destacado -->
         <div class="grid grid-cols-2 gap-4 items-end">
           <div class="space-y-1.5">
             <label class="block text-sm font-medium text-blanco-suave">Imagen del proyecto</label>
-            <input type="file" accept="image/*" class="w-full text-sm text-gris-medio file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-white/5 file:text-blanco-suave hover:file:bg-white/10 transition-all" @change="manejarArchivoImg" />
+            <input type="file" accept="image/*"
+              class="w-full text-sm text-gris-medio file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-white/5 file:text-blanco-suave hover:file:bg-white/10 transition-all"
+              @change="manejarArchivoImg" />
           </div>
           <label class="flex items-center gap-3 cursor-pointer pb-2.5">
             <div class="relative">
@@ -384,7 +362,6 @@ const manejarArchivoImg = (e: Event) => {
           </label>
         </div>
       </div>
-
       <template #footer>
         <AppBoton variante="fantasma" @click="modalForm = false">Cancelar</AppBoton>
         <AppBoton variante="primario" :cargando="guardando" @click="guardar">

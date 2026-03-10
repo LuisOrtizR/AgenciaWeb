@@ -11,14 +11,28 @@ export function usePaginacion(porPaginaInicial = 10) {
   const totalPaginas   = ref(1)
   const totalRegistros = ref(0)
 
-  const hayPaginaAnterior = computed(() => paginaActual.value > 1)
+  // ── Computed ───────────────────────────────────────────────────────
+  const hayPaginaAnterior  = computed(() => paginaActual.value > 1)
   const hayPaginaSiguiente = computed(() => paginaActual.value < totalPaginas.value)
 
+  /** Genera un rango de páginas visible alrededor de la página actual */
+  const rangoVisible = computed<number[]>(() => {
+    const delta  = 2
+    const inicio = Math.max(1, paginaActual.value - delta)
+    const fin    = Math.min(totalPaginas.value, paginaActual.value + delta)
+    return Array.from({ length: fin - inicio + 1 }, (_, i) => inicio + i)
+  })
+
+  /** Indica si la paginación tiene más de una página */
+  const tienePaginacion = computed(() => totalPaginas.value > 1)
+
+  // ── Métodos ────────────────────────────────────────────────────────
   const actualizarPaginacion = (paginacion: Paginacion): void => {
-    paginaActual.value   = paginacion.pagina_actual
-    totalPaginas.value   = paginacion.total_paginas
-    totalRegistros.value = paginacion.total_registros
-    porPagina.value      = paginacion.por_pagina
+    // ✅ Propiedades exactas del tipo Paginacion en @/types
+    paginaActual.value   = paginacion.pagina        // pagina (no paginaActual)
+    totalPaginas.value   = paginacion.totalPaginas
+    totalRegistros.value = paginacion.total          // total (no totalRegistros)
+    porPagina.value      = paginacion.porPagina
   }
 
   const irAPagina = (pagina: number): void => {
@@ -39,12 +53,17 @@ export function usePaginacion(porPaginaInicial = 10) {
   }
 
   return {
+    // estado
     paginaActual,
     porPagina,
     totalPaginas,
     totalRegistros,
+    // computed
     hayPaginaAnterior,
     hayPaginaSiguiente,
+    rangoVisible,
+    tienePaginacion,
+    // métodos
     actualizarPaginacion,
     irAPagina,
     paginaAnterior,

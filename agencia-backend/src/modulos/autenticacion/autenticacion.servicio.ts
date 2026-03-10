@@ -1,15 +1,21 @@
 import prisma   from '../../config/baseDatos.js'
 import bcrypt    from 'bcryptjs'
+import crypto    from 'crypto'
 import entorno   from '../../config/entorno.js'
 import {
   generarToken,
   generarTokenRefresco,
   verificarTokenRefresco,
 } from '../../utilidades/tokens.js'
-import { enviarBienvenida } from '../../config/correo.js'
+import {
+  enviarBienvenida,
+  enviarResetContrasena,
+} from '../../config/correo.js'
 import {
   DatosRegistro,
   DatosLogin,
+  DatosSolicitarReset,
+  DatosResetearContrasena,
 } from './autenticacion.tipos.js'
 
 /**
@@ -34,7 +40,6 @@ export const registrar = async (datos: DatosRegistro) => {
     select: { id: true, nombre: true, correo: true, rol: true },
   })
 
-  // Correo de bienvenida — no bloquea si falla
   enviarBienvenida({ nombre: usuario.nombre, correo: usuario.correo }).catch(() => {})
 
   const tokenAcceso   = generarToken({ id: usuario.id, correo: usuario.correo, rol: usuario.rol })
@@ -113,4 +118,69 @@ export const refrescarToken = async (tokenRefresco: string) => {
   })
 
   return { tokenAcceso: nuevoToken }
+}
+
+// ─── Solicitar reset de contraseña ────────────────────────────────────────────
+export const solicitarReset = async (datos: DatosSolicitarReset) => {
+  const usuario = await prisma.usuario.findUnique({
+    where: { correo: datos.correo },
+  })
+
+  // Respuesta genérica: no revelar si el correo existe o no
+  if (!usuario || !usuario.activo) {
+    return { mensaje: 'Si el correo existe, recibirás un enlace en breve.' }
+  }
+
+  // Token seguro de 32 bytes → hex (64 chars)
+  const token         = crypto.randomBytes(32).toString('hex')
+  const tokenHash     = crypto.createHash('sha256').update(token).digest('hex')
+  const expiracion    = new Date(Date.now() + 60 * 60 * 1000) // 1 hora
+
+  await prisma.usuario.update({
+    where: { id: usuario.id },
+    data: {
+      tokenReset:        tokenHash,
+      tokenResetExpira:  expiracion,
+    },
+  })
+
+  const urlReset = `${entorno.URL_FRONTEND}/reset-contrasena?token=${token}`
+
+  enviarResetContrasena({
+    nombre:   usuario.nombre,
+    correo:   usuario.correo,
+    urlReset,
+  }).catch(() => {})
+
+  return { mensaje: 'Si el correo existe, recibirás un enlace en breve.' }
+}
+
+// ─── Resetear contraseña con token ───────────────────────────────────────────
+export const resetearContrasena = async (datos: DatosResetearContrasena) => {
+  // Hashear el token recibido para comparar con el guardado
+  const tokenHash = crypto.createHash('sha256').update(datos.token).digest('hex')
+
+  const usuario = await prisma.usuario.findFirst({
+    where: {
+      tokenReset:       tokenHash,
+      tokenResetExpira: { gt: new Date() }, // No expirado
+    },
+  })
+
+  if (!usuario) {
+    throw new Error('El enlace de recuperación es inválido o ha expirado.')
+  }
+
+  const hash = await bcrypt.hash(datos.contrasena, entorno.BCRYPT_RONDAS)
+
+  await prisma.usuario.update({
+    where: { id: usuario.id },
+    data: {
+      contrasena:       hash,
+      tokenReset:       null,
+      tokenResetExpira: null,
+    },
+  })
+
+  return { mensaje: 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.' }
 }

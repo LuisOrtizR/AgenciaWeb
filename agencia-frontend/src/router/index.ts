@@ -1,23 +1,8 @@
-/**
- * router/index.ts — Enrutador con guards de autenticación y roles
- *
- * Rutas públicas:   /, /servicios, /proyectos, /contacto, /login
- * Rutas protegidas: /admin/* (requiere token + rol ADMIN)
- *
- * Guards:
- * - requireAuth: redirige a /login si no hay sesión activa
- * - requireAdmin: redirige a / si el rol no es ADMIN
- * - redirectIfAuth: redirige a /admin si ya está autenticado (ej. en /login)
- */
-
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
-// ─── Definición de rutas ──────────────────────────────────────────────────────
-
 const rutas: RouteRecordRaw[] = [
 
-  // ── Sitio público ────────────────────────────────────────────────────────────
   {
     path:      '/',
     component: () => import('@/layouts/LayoutPublico.vue'),
@@ -67,37 +52,45 @@ const rutas: RouteRecordRaw[] = [
     ],
   },
 
-  // ── Autenticación ────────────────────────────────────────────────────────────
   {
     path:      '/login',
     name:      'login',
     component: () => import('@/views/auth/LoginView.vue'),
-    meta: {
-      titulo:          'Iniciar sesión — Nexova Studio',
-      redirigirSiAuth: true,
-    },
+    meta: { titulo: 'Iniciar sesión — Nexova Studio', redirigirSiAuth: true },
   },
   {
     path:      '/registro',
     name:      'registro',
     component: () => import('@/views/auth/RegistroView.vue'),
-    meta: {
-      titulo:          'Crear cuenta — Nexova Studio',
-      redirigirSiAuth: true,
-    },
+    meta: { titulo: 'Crear cuenta — Nexova Studio', redirigirSiAuth: true },
+  },
+  {
+    path:      '/olvide-contrasena',
+    name:      'olvide-contrasena',
+    component: () => import('@/views/auth/Olvidecontrasenaview.vue'),
+    meta: { titulo: 'Recuperar contraseña — Nexova Studio', redirigirSiAuth: true },
+  },
+  {
+    path:      '/reset-contrasena',
+    name:      'reset-contrasena',
+    component: () => import('@/views/auth/Resetcontrasenaview.vue'),
+    meta: { titulo: 'Nueva contraseña — Nexova Studio', redirigirSiAuth: true },
   },
 
-  // ── Panel de cliente ─────────────────────────────────────────────────────────
   {
     path:      '/cliente',
-    component: () => import('@/layouts/LayoutPublico.vue'), // Or a specific cliente layout if exists
-    meta: {
-      requireAuth: true,
-    },
+    component: () => import('@/layouts/LayoutPublico.vue'),
+    meta: { requireAuth: true },
     children: [
       {
-        path:      '',
-        redirect:  { name: 'cliente-perfil' },
+        path:     '',
+        redirect: { name: 'cliente-cotizaciones' },
+      },
+      {
+        path:      'cotizaciones',
+        name:      'cliente-cotizaciones',
+        component: () => import('@/views/cliente/MisCotizacionesView.vue'),
+        meta: { titulo: 'Mis Cotizaciones — Nexova Cliente' },
       },
       {
         path:      'perfil',
@@ -108,18 +101,14 @@ const rutas: RouteRecordRaw[] = [
     ],
   },
 
-  // ── Panel de administración ──────────────────────────────────────────────────
   {
     path:      '/admin',
     component: () => import('@/layouts/LayoutAdmin.vue'),
-    meta: {
-      requireAuth:  true,
-      requireAdmin: true,
-    },
+    meta: { requireAuth: true, requireAdmin: true },
     children: [
       {
-        path:      '',
-        redirect:  { name: 'admin-dashboard' },
+        path:     '',
+        redirect: { name: 'admin-dashboard' },
       },
       {
         path:      'dashboard',
@@ -184,7 +173,6 @@ const rutas: RouteRecordRaw[] = [
     ],
   },
 
-  // ── 404 ──────────────────────────────────────────────────────────────────────
   {
     path:      '/:pathMatch(.*)*',
     name:      'no-encontrado',
@@ -192,8 +180,6 @@ const rutas: RouteRecordRaw[] = [
     meta: { titulo: 'Página no encontrada — Nexova Studio' },
   },
 ]
-
-// ─── Crear router ─────────────────────────────────────────────────────────────
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -205,39 +191,28 @@ const router = createRouter({
   },
 })
 
-// ─── Guard global ─────────────────────────────────────────────────────────────
-
 router.beforeEach((to, _from) => {
   const authStore = useAuthStore()
 
-  // Actualizar título de la pestaña
   const titulo = to.meta.titulo as string | undefined
   if (titulo) document.title = titulo
 
-  // Redirigir a /admin si ya está autenticado e intenta ir al login
   if (to.meta.redirigirSiAuth && authStore.estaAutenticado) {
-    return { name: 'admin-dashboard' }
+    return authStore.esAdmin
+      ? { name: 'admin-dashboard' }
+      : { name: 'cliente-cotizaciones' }
   }
 
-  // Ruta requiere autenticación
   if (to.meta.requireAuth && !authStore.estaAutenticado) {
-    return {
-      name:  'login',
-      query: { redirigir: to.fullPath }, // Para redirigir después del login
-    }
+    return { name: 'login', query: { redirigir: to.fullPath } }
   }
 
-  // Ruta requiere rol ADMIN
   if (to.meta.requireAdmin && !authStore.esAdmin) {
-    // Si está autenticado pero no es admin → ir al inicio
-    if (authStore.estaAutenticado) {
-      return { name: 'inicio' }
-    }
-    return { name: 'login' }
+    return authStore.estaAutenticado
+      ? { name: 'cliente-cotizaciones' }
+      : { name: 'login' }
   }
 })
-
-// ─── Meta tipado de rutas ─────────────────────────────────────────────────────
 
 declare module 'vue-router' {
   interface RouteMeta {

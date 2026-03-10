@@ -21,8 +21,23 @@ export const esquemaRefrescarToken = z.object({
   tokenRefresco: z.string().min(1, 'El token de refresco es requerido'),
 })
 
+export const esquemaSolicitarReset = z.object({
+  correo: z.string().email('El correo no es válido'),
+})
+
+export const esquemaResetearContrasena = z.object({
+  token:      z.string().min(1, 'El token es requerido'),
+  contrasena: z
+    .string()
+    .min(8, 'La contraseña debe tener al menos 8 caracteres')
+    .regex(/[A-Z]/, 'Debe contener al menos una mayúscula')
+    .regex(/[0-9]/, 'Debe contener al menos un número'),
+})
+
 // ─── Tipos inferidos ──────────────────────────────────────────────────────────
 
-export type DatosRegistro       = z.infer<typeof esquemaRegistro>
-export type DatosLogin          = z.infer<typeof esquemaLogin>
-export type DatosRefrescarToken = z.infer<typeof esquemaRefrescarToken>
+export type DatosRegistro           = z.infer<typeof esquemaRegistro>
+export type DatosLogin              = z.infer<typeof esquemaLogin>
+export type DatosRefrescarToken     = z.infer<typeof esquemaRefrescarToken>
+export type DatosSolicitarReset     = z.infer<typeof esquemaSolicitarReset>
+export type DatosResetearContrasena = z.infer<typeof esquemaResetearContrasena>
