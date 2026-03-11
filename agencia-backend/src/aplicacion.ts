@@ -28,8 +28,8 @@ aplicacion.use(express.json())
 aplicacion.use(express.urlencoded({ extended: true }))
 if (!entorno.esProduccion) aplicacion.use(morgan('dev'))
 
-aplicacion.get('/api/salud', (_req: Request, res: Response) =>
-  res.json({ estado: 'OK', mensaje: 'Servidor funcionando correctamente' })
+aplicacion.get('/', (_req: Request, res: Response) =>
+  res.json({ estado: 'OK', mensaje: 'API AIWeb Creator funcionando 🚀' })
 )
 
 aplicacion.use('/api/autenticacion', rutasAutenticacion)

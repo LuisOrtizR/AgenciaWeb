@@ -1,0 +1,30 @@
+# docker-compose.yml
+services:
+  backend:
+    build:
+      context: ./agencia-backend
+      dockerfile: Dockerfile
+    container_name: agencia-backend
+    restart: unless-stopped
+    env_file: ./agencia-backend/.env
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./agencia-backend/subidas:/app/subidas
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/salud"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./agencia-frontend
+      dockerfile: Dockerfile
+    container_name: agencia-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy

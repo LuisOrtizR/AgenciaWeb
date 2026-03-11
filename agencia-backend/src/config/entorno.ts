@@ -16,7 +16,7 @@ const entorno = {
 
   get esProduccion() { return this.ENTORNO === 'production' },
 
-  URL_FRONTEND: opcional('URL_FRONTEND', 'http://localhost:5173'),
+  URL_FRONTEND: opcional('URL_FRONTEND', 'http://localhost'),
 
   JWT_SECRETO:             requerida('JWT_SECRETO'),
   JWT_SECRETO_REFRESCO:    requerida('JWT_SECRETO_REFRESCO'),
