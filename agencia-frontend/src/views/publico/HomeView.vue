@@ -1,18 +1,49 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { proyectosServicio, serviciosServicio, testimoniosServicio } from '@/services/servicios'
-import type { Proyecto, Testimonio } from '@/types'
+import type { Proyecto, Servicio, Testimonio } from '@/types'
 
-interface ServicioConUsd {
-  id: string; nombre: string; slug: string; descripcion: string
-  precioDesde: number; precioHasta: number | null; semanasEntrega: number
-  caracteristicas: string[]; precioDesdeUsd?: number; tasaCOP_USD?: number
+interface ServicioConUsd extends Servicio {
+  precioDesdeUsd?: number
+  tasaCOP_USD?:    number
 }
 
 const proyectosDestacados = ref<Proyecto[]>([])
 const servicios           = ref<ServicioConUsd[]>([])
 const testimonios         = ref<Testimonio[]>([])
 const cargando            = ref(true)
+
+const STATS = [
+  { valor: '+50', label: 'Proyectos'   },
+  { valor: '4.9★', label: 'Calificación' },
+  { valor: '3+',  label: 'Años'        },
+]
+
+const ICONOS_SERVICIO = [
+  'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4',
+  'M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v10m0 0h10M9 13H5m4 0v6m0 0H5a2 2 0 01-2-2v-4m14 6V9m0 10h4a2 2 0 002-2v-4',
+  'M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z',
+  'M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z',
+  'M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4',
+  'M13 10V3L4 14h7v7l9-11h-7z',
+]
+
+const COLORES_AVATAR = [
+  'from-violet-500 to-indigo-600',
+  'from-pink-500 to-rose-600',
+  'from-emerald-500 to-teal-600',
+  'from-amber-500 to-orange-600',
+  'from-sky-500 to-blue-600',
+]
+
+const colorAvatar = (nombre: string) =>
+  COLORES_AVATAR[nombre.charCodeAt(0) % COLORES_AVATAR.length]
+
+const cop = (monto: number) =>
+  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(monto)
+
+const usd = (monto: number) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(monto)
 
 onMounted(async () => {
   try {
@@ -28,33 +59,12 @@ onMounted(async () => {
     cargando.value = false
   }
 })
-
-const cop = (m: number) =>
-  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(m)
-
-const usd = (m: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(m)
-
-const coloresAvatar = [
-  'from-violet-500 to-indigo-600', 'from-pink-500 to-rose-600',
-  'from-emerald-500 to-teal-600',  'from-amber-500 to-orange-600',
-  'from-sky-500 to-blue-600',
-]
-const colorAvatar = (n: string) => coloresAvatar[n.charCodeAt(0) % coloresAvatar.length]
-
-const ICONOS_SERVICIO = [
-  'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4',
-  'M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v10m0 0h10M9 13H5m4 0v6m0 0H5a2 2 0 01-2-2v-4m14 6V9m0 10h4a2 2 0 002-2v-4',
-  'M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z',
-  'M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z',
-  'M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4',
-  'M13 10V3L4 14h7v7l9-11h-7z',
-]
 </script>
 
 <template>
   <div class="bg-[#0a0a0f]">
 
+    <!-- ── Hero ─────────────────────────────────────────────────────────── -->
     <section class="relative min-h-screen flex items-center justify-center overflow-hidden">
       <div class="absolute inset-0 pointer-events-none">
         <div class="absolute top-1/4 left-1/4 w-125 h-125 bg-violet-600/10 rounded-full blur-[130px]" />
@@ -64,15 +74,13 @@ const ICONOS_SERVICIO = [
       </div>
 
       <div class="relative z-10 max-w-5xl mx-auto px-6 text-center pt-28 pb-20">
-
         <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/20 mb-8">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span class="text-violet-300 text-sm font-medium">Disponibles para nuevos proyectos</span>
         </div>
 
         <h1 class="text-6xl md:text-7xl lg:text-8xl font-black text-white leading-[1.02] tracking-tight mb-7">
-          Convertimos ideas<br />
-          en
+          Convertimos ideas<br />en
           <span class="relative inline-block">
             <span class="bg-linear-to-r from-violet-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">experiencias web</span>
             <span class="absolute -bottom-1 left-0 right-0 h-px bg-linear-to-r from-violet-400/0 via-violet-400/60 to-indigo-400/0" />
@@ -102,8 +110,11 @@ const ICONOS_SERVICIO = [
         </div>
 
         <div class="grid grid-cols-3 gap-4 max-w-md mx-auto">
-          <div v-for="stat in [{ valor: '+50', label: 'Proyectos' }, { valor: '4.9★', label: 'Calificación' }, { valor: '3+', label: 'Años' }]" :key="stat.valor"
-            class="p-4 rounded-2xl bg-white/3 border border-white/5">
+          <div
+            v-for="stat in STATS"
+            :key="stat.valor"
+            class="p-4 rounded-2xl bg-white/3 border border-white/5"
+          >
             <p class="text-2xl font-black text-white">{{ stat.valor }}</p>
             <p class="text-xs text-gray-500 mt-1">{{ stat.label }}</p>
           </div>
@@ -117,6 +128,7 @@ const ICONOS_SERVICIO = [
       </div>
     </section>
 
+    <!-- ── Servicios ─────────────────────────────────────────────────────── -->
     <section class="py-28 bg-[#0d0d14]">
       <div class="max-w-7xl mx-auto px-6">
         <div class="flex flex-col sm:flex-row sm:items-end justify-between mb-14 gap-4">
@@ -166,6 +178,7 @@ const ICONOS_SERVICIO = [
       </div>
     </section>
 
+    <!-- ── Proyectos ──────────────────────────────────────────────────────── -->
     <section class="py-28 bg-[#0a0a0f]">
       <div class="max-w-7xl mx-auto px-6">
         <div class="flex flex-col sm:flex-row sm:items-end justify-between mb-14 gap-4">
@@ -197,8 +210,12 @@ const ICONOS_SERVICIO = [
             class="group rounded-2xl overflow-hidden bg-[#111118] border border-white/5 hover:border-violet-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-violet-500/8"
           >
             <div class="h-48 bg-linear-to-br from-violet-600/8 to-indigo-600/5 overflow-hidden relative">
-              <img v-if="p.imagenUrl" :src="p.imagenUrl" :alt="p.titulo"
-                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+              <img
+                v-if="p.imagenUrl"
+                :src="p.imagenUrl"
+                :alt="p.titulo"
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              />
               <div v-else class="w-full h-full flex items-center justify-center">
                 <svg class="w-12 h-12 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -210,11 +227,15 @@ const ICONOS_SERVICIO = [
               <h3 class="font-semibold text-white group-hover:text-violet-300 transition-colors mb-1.5">{{ p.titulo }}</h3>
               <p class="text-gray-500 text-sm line-clamp-2 leading-relaxed">{{ p.descripcion }}</p>
               <div class="flex flex-wrap gap-1.5 mt-4">
-                <span v-for="tech in p.stackTecnico.slice(0, 3)" :key="tech"
-                  class="px-2.5 py-1 rounded-lg bg-white/4 border border-white/6 text-xs text-gray-500">{{ tech }}</span>
-                <span v-if="p.stackTecnico.length > 3" class="px-2.5 py-1 rounded-lg bg-white/4 border border-white/6 text-xs text-gray-600">
-                  +{{ p.stackTecnico.length - 3 }}
-                </span>
+                <span
+                  v-for="tech in p.stackTecnico.slice(0, 3)"
+                  :key="tech"
+                  class="px-2.5 py-1 rounded-lg bg-white/4 border border-white/6 text-xs text-gray-500"
+                >{{ tech }}</span>
+                <span
+                  v-if="p.stackTecnico.length > 3"
+                  class="px-2.5 py-1 rounded-lg bg-white/4 border border-white/6 text-xs text-gray-600"
+                >+{{ p.stackTecnico.length - 3 }}</span>
               </div>
             </div>
           </RouterLink>
@@ -222,6 +243,7 @@ const ICONOS_SERVICIO = [
       </div>
     </section>
 
+    <!-- ── Testimonios ────────────────────────────────────────────────────── -->
     <section v-if="!cargando && testimonios.length" class="py-28 bg-[#0d0d14]">
       <div class="max-w-7xl mx-auto px-6">
         <div class="text-center mb-14">
@@ -265,6 +287,7 @@ const ICONOS_SERVICIO = [
       </div>
     </section>
 
+    <!-- ── CTA ────────────────────────────────────────────────────────────── -->
     <section class="py-28 bg-[#0a0a0f]">
       <div class="max-w-3xl mx-auto px-6 text-center">
         <div class="relative overflow-hidden p-14 rounded-3xl bg-[#111118] border border-white/6">

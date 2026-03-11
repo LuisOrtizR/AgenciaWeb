@@ -221,19 +221,19 @@ export interface ResumenProspectos {
 }
 
 export interface Proyecto {
-  id:            string
-  titulo:        string
-  slug:          string
-  descripcion:   string
-  stackTecnico:  string[]
-  imagenUrl:     string | null
-  urlEnVivo:     string | null
-  urlGithub:     string | null
-  destacado:     boolean
-  servicio?:     Servicio | null
-  servicioId:    string | null
-  testimonios?:  Testimonio[]
-  creadoEn:      string
+  id:             string
+  titulo:         string
+  slug:           string
+  descripcion:    string
+  stackTecnico:   string[]
+  imagenUrl:      string | null
+  urlEnVivo:      string | null
+  urlGithub:      string | null
+  destacado:      boolean
+  servicio?:      Servicio | null
+  servicioId:     string | null
+  testimonios?:   Testimonio[]
+  creadoEn:       string
   actualizadoEn?: string
 }
 
@@ -387,7 +387,7 @@ export interface MensajeChat {
 }
 
 export interface DatosChatMensaje {
-  mensaje:   string
+  mensaje:    string
   historial?: MensajeChat[]
 }
 

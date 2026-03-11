@@ -1,6 +1,5 @@
 import { z } from 'zod'
 
-// ─── Esquemas de validación ───────────────────────────────────────────────────
 
 export const esquemaRegistro = z.object({
   nombre:     z.string().min(2, 'El nombre debe tener al menos 2 caracteres').max(100),
@@ -34,7 +33,6 @@ export const esquemaResetearContrasena = z.object({
     .regex(/[0-9]/, 'Debe contener al menos un número'),
 })
 
-// ─── Tipos inferidos ──────────────────────────────────────────────────────────
 
 export type DatosRegistro           = z.infer<typeof esquemaRegistro>
 export type DatosLogin              = z.infer<typeof esquemaLogin>

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useAuthStore }        from '@/stores/auth'
-import { useUiStore }          from '@/stores/ui'
-import { cotizacionesServicio } from '@/services/servicios'
+import { useAuthStore }             from '@/stores/auth'
+import { useUiStore }               from '@/stores/ui'
+import { cotizacionesServicio }     from '@/services/servicios'
 import type { Cotizacion, EstadoCotizacion } from '@/types'
 
 const authStore = useAuthStore()
@@ -11,6 +11,29 @@ const uiStore   = useUiStore()
 const cargando     = ref(true)
 const respondiendo = ref<string | null>(null)
 const cotizaciones = ref<Cotizacion[]>([])
+
+const CONFIG_ESTADO: Record<EstadoCotizacion, { label: string; clase: string }> = {
+  PENDIENTE: { label: 'Pendiente',          clase: 'bg-slate-500/15 text-slate-400 border-slate-500/20' },
+  ENVIADA:   { label: 'Esperando respuesta', clase: 'bg-blue-500/15 text-blue-400 border-blue-500/20' },
+  ACEPTADA:  { label: 'Aceptada',           clase: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' },
+  RECHAZADA: { label: 'Rechazada',          clase: 'bg-red-500/15 text-red-400 border-red-500/20' },
+}
+
+const formatPrecio = (n: number) =>
+  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n)
+
+const formatFecha = (s: string) =>
+  new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(new Date(s))
+
+const pendientes = computed(() => cotizaciones.value.filter(c => c.estado === 'ENVIADA').length)
+const aceptadas  = computed(() => cotizaciones.value.filter(c => c.estado === 'ACEPTADA').length)
+
+const iniciales = computed(() =>
+  (authStore.nombreUsuario || 'U')
+    .split(' ').slice(0, 2)
+    .map(p => p[0]?.toUpperCase() ?? '')
+    .join('')
+)
 
 const cargar = async () => {
   cargando.value = true
@@ -23,8 +46,6 @@ const cargar = async () => {
     cargando.value = false
   }
 }
-
-onMounted(cargar)
 
 const responder = async (id: string, estado: 'ACEPTADA' | 'RECHAZADA') => {
   respondiendo.value = id
@@ -45,42 +66,11 @@ const responder = async (id: string, estado: 'ACEPTADA' | 'RECHAZADA') => {
   }
 }
 
-const pendientes  = computed(() => cotizaciones.value.filter(c => c.estado === 'ENVIADA').length)
-const aceptadas   = computed(() => cotizaciones.value.filter(c => c.estado === 'ACEPTADA').length)
-const rechazadas  = computed(() => cotizaciones.value.filter(c => c.estado === 'RECHAZADA').length)
-
-const formatPrecio = (n: number) =>
-  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n)
-
-const formatFecha = (s: string) =>
-  new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(new Date(s))
-
-const colorEstado: Record<EstadoCotizacion, string> = {
-  PENDIENTE: 'bg-slate-500/15 text-slate-400 border-slate-500/20',
-  ENVIADA:   'bg-blue-500/15 text-blue-400 border-blue-500/20',
-  ACEPTADA:  'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',
-  RECHAZADA: 'bg-red-500/15 text-red-400 border-red-500/20',
-}
-
-const labelEstado: Record<EstadoCotizacion, string> = {
-  PENDIENTE: 'Pendiente',
-  ENVIADA:   'Esperando respuesta',
-  ACEPTADA:  'Aceptada',
-  RECHAZADA: 'Rechazada',
-}
-
-const iniciales = computed(() =>
-  (authStore.nombreUsuario || 'U')
-    .split(' ').slice(0, 2)
-    .map(p => p[0]?.toUpperCase() ?? '')
-    .join('')
-)
+onMounted(cargar)
 </script>
 
 <template>
   <div class="max-w-3xl mx-auto px-4 pt-24 pb-10 space-y-6">
-
-    <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-black text-white">Mis cotizaciones</h1>
@@ -91,7 +81,6 @@ const iniciales = computed(() =>
       </div>
     </div>
 
-    <!-- Stats -->
     <div class="grid grid-cols-3 gap-3">
       <div class="bg-[#13151f] border border-white/5 rounded-2xl p-4 text-center">
         <p class="text-2xl font-black text-white">{{ cotizaciones.length }}</p>
@@ -107,11 +96,7 @@ const iniciales = computed(() =>
       </div>
     </div>
 
-    <!-- Alerta si hay pendientes -->
-    <div
-      v-if="pendientes > 0"
-      class="flex items-start gap-3 px-4 py-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20"
-    >
+    <div v-if="!cargando && pendientes > 0" class="flex items-start gap-3 px-4 py-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20">
       <svg class="w-4 h-4 text-blue-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
@@ -120,12 +105,10 @@ const iniciales = computed(() =>
       </p>
     </div>
 
-    <!-- Skeleton -->
     <div v-if="cargando" class="space-y-3">
       <div v-for="i in 3" :key="i" class="h-32 bg-white/5 rounded-2xl animate-pulse" />
     </div>
 
-    <!-- Empty state -->
     <div
       v-else-if="cotizaciones.length === 0"
       class="bg-[#13151f] border border-white/5 rounded-2xl p-12 flex flex-col items-center gap-4"
@@ -147,15 +130,12 @@ const iniciales = computed(() =>
       </RouterLink>
     </div>
 
-    <!-- Lista de cotizaciones -->
     <div v-else class="space-y-3">
       <div
         v-for="cotizacion in cotizaciones"
         :key="cotizacion.id"
         class="bg-[#13151f] border rounded-2xl p-5 transition-all"
-        :class="cotizacion.estado === 'ENVIADA'
-          ? 'border-blue-500/25 shadow-lg shadow-blue-500/5'
-          : 'border-white/5'"
+        :class="cotizacion.estado === 'ENVIADA' ? 'border-blue-500/25 shadow-lg shadow-blue-500/5' : 'border-white/5'"
       >
         <div class="flex items-start justify-between gap-4">
           <div class="min-w-0">
@@ -163,9 +143,9 @@ const iniciales = computed(() =>
               <h3 class="text-white font-semibold text-sm">{{ cotizacion.servicio.nombre }}</h3>
               <span
                 class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border"
-                :class="colorEstado[cotizacion.estado]"
+                :class="CONFIG_ESTADO[cotizacion.estado].clase"
               >
-                {{ labelEstado[cotizacion.estado] }}
+                {{ CONFIG_ESTADO[cotizacion.estado].label }}
               </span>
             </div>
             <p class="text-slate-500 text-xs mt-1">{{ formatFecha(cotizacion.creadoEn) }}</p>
@@ -173,7 +153,6 @@ const iniciales = computed(() =>
           <p class="text-white font-black text-lg shrink-0">{{ formatPrecio(cotizacion.precioTotal) }}</p>
         </div>
 
-        <!-- Extras -->
         <div v-if="cotizacion.extras?.length" class="flex flex-wrap gap-1.5 mt-3">
           <span
             v-for="extra in cotizacion.extras"
@@ -184,12 +163,10 @@ const iniciales = computed(() =>
           </span>
         </div>
 
-        <!-- Notas -->
         <p v-if="cotizacion.notas" class="mt-3 text-slate-400 text-xs leading-relaxed border-t border-white/5 pt-3">
           {{ cotizacion.notas }}
         </p>
 
-        <!-- Acciones para ENVIADA -->
         <div v-if="cotizacion.estado === 'ENVIADA'" class="flex items-center gap-2 mt-4 pt-4 border-t border-white/5">
           <p class="text-xs text-slate-500 flex-1">¿Aceptas esta propuesta?</p>
           <button
@@ -224,7 +201,6 @@ const iniciales = computed(() =>
           </button>
         </div>
 
-        <!-- Mensaje estado final -->
         <div v-else-if="cotizacion.estado === 'ACEPTADA'" class="flex items-center gap-2 mt-4 pt-4 border-t border-emerald-500/10">
           <svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -234,7 +210,6 @@ const iniciales = computed(() =>
       </div>
     </div>
 
-    <!-- Nav inferior -->
     <div class="flex items-center gap-2 pt-2">
       <RouterLink
         :to="{ name: 'cliente-perfil' }"
@@ -255,6 +230,5 @@ const iniciales = computed(() =>
         Solicitar nueva cotización
       </RouterLink>
     </div>
-
   </div>
 </template>

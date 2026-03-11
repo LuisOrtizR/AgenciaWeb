@@ -1,8 +1,17 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
-const rutas: RouteRecordRaw[] = [
+declare module 'vue-router' {
+  interface RouteMeta {
+    titulo?:          string
+    requireAuth?:     boolean
+    requireAdmin?:    boolean
+    soloCliente?:     boolean
+    redirigirSiAuth?: boolean
+  }
+}
 
+const rutas: RouteRecordRaw[] = [
   {
     path:      '/',
     component: () => import('@/layouts/LayoutPublico.vue'),
@@ -51,12 +60,11 @@ const rutas: RouteRecordRaw[] = [
       },
     ],
   },
-
   {
     path:      '/login',
     name:      'login',
     component: () => import('@/views/auth/LoginView.vue'),
-    meta: { titulo: 'Iniciar sesión — Nexova Studio', redirigirSiAuth: true },
+    meta: { titulo: 'Iniciar sesion — Nexova Studio', redirigirSiAuth: true },
   },
   {
     path:      '/registro',
@@ -68,19 +76,18 @@ const rutas: RouteRecordRaw[] = [
     path:      '/olvide-contrasena',
     name:      'olvide-contrasena',
     component: () => import('@/views/auth/Olvidecontrasenaview.vue'),
-    meta: { titulo: 'Recuperar contraseña — Nexova Studio', redirigirSiAuth: true },
+    meta: { titulo: 'Recuperar contrasena — Nexova Studio', redirigirSiAuth: true },
   },
   {
     path:      '/reset-contrasena',
     name:      'reset-contrasena',
     component: () => import('@/views/auth/Resetcontrasenaview.vue'),
-    meta: { titulo: 'Nueva contraseña — Nexova Studio', redirigirSiAuth: true },
+    meta: { titulo: 'Nueva contrasena — Nexova Studio', redirigirSiAuth: true },
   },
-
   {
     path:      '/cliente',
     component: () => import('@/layouts/LayoutPublico.vue'),
-    meta: { requireAuth: true },
+    meta: { requireAuth: true, soloCliente: true },
     children: [
       {
         path:     '',
@@ -100,7 +107,6 @@ const rutas: RouteRecordRaw[] = [
       },
     ],
   },
-
   {
     path:      '/admin',
     component: () => import('@/layouts/LayoutAdmin.vue'),
@@ -138,7 +144,7 @@ const rutas: RouteRecordRaw[] = [
         path:      'cotizaciones/:id',
         name:      'admin-cotizacion-detalle',
         component: () => import('@/views/admin/Cotizaciondetalleview.vue'),
-        meta: { titulo: 'Cotización — Nexova Admin' },
+        meta: { titulo: 'Cotizacion — Nexova Admin' },
       },
       {
         path:      'proyectos',
@@ -172,12 +178,11 @@ const rutas: RouteRecordRaw[] = [
       },
     ],
   },
-
   {
     path:      '/:pathMatch(.*)*',
     name:      'no-encontrado',
     component: () => import('@/views/NoEncontradoView.vue'),
-    meta: { titulo: 'Página no encontrada — Nexova Studio' },
+    meta: { titulo: 'Pagina no encontrada — Nexova Studio' },
   },
 ]
 
@@ -185,42 +190,37 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes:  rutas,
   scrollBehavior(to, _from, savedPosition) {
-    if (savedPosition) return savedPosition
+    if (savedPosition)  return savedPosition
     if (to.hash)        return { el: to.hash, behavior: 'smooth' }
     return { top: 0, behavior: 'smooth' }
   },
 })
 
 router.beforeEach((to, _from) => {
-  const authStore = useAuthStore()
+  const auth = useAuthStore()
 
   const titulo = to.meta.titulo as string | undefined
   if (titulo) document.title = titulo
 
-  if (to.meta.redirigirSiAuth && authStore.estaAutenticado) {
-    return authStore.esAdmin
+  if (to.meta.redirigirSiAuth && auth.estaAutenticado) {
+    return auth.esAdmin
       ? { name: 'admin-dashboard' }
       : { name: 'cliente-cotizaciones' }
   }
 
-  if (to.meta.requireAuth && !authStore.estaAutenticado) {
+  if (to.meta.requireAuth && !auth.estaAutenticado) {
     return { name: 'login', query: { redirigir: to.fullPath } }
   }
 
-  if (to.meta.requireAdmin && !authStore.esAdmin) {
-    return authStore.estaAutenticado
+  if (to.meta.requireAdmin && !auth.esAdmin) {
+    return auth.estaAutenticado
       ? { name: 'cliente-cotizaciones' }
       : { name: 'login' }
   }
-})
 
-declare module 'vue-router' {
-  interface RouteMeta {
-    titulo?:          string
-    requireAuth?:     boolean
-    requireAdmin?:    boolean
-    redirigirSiAuth?: boolean
+  if (to.meta.soloCliente && auth.esAdmin) {
+    return { name: 'admin-dashboard' }
   }
-}
+})
 
 export default router

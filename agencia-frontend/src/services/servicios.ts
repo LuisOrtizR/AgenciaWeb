@@ -1,20 +1,50 @@
 import api from './api'
 import type {
-  RespuestaApi, RespuestaPaginada,
-  RespuestaAuth, UsuarioConConteo,
-  DatosActualizarPerfil, DatosCambiarContrasena,
-  DatosCrearUsuario, DatosActualizarUsuario,
-  FiltrosUsuario, ResumenUsuarios, Usuario,
-  Servicio, DatosCrearServicio, DatosActualizarServicio, FiltrosServicio,
-  Prospecto, DatosCrearProspecto, DatosActualizarProspecto,
-  DatosActualizarEstadoProspecto, FiltrosProspecto, ResumenProspectos,
-  Proyecto, DatosCrearProyecto, DatosActualizarProyecto, FiltrosProyecto, TecnologiaConteo,
-  Cotizacion, DatosCrearCotizacion, DatosActualizarCotizacion,
-  DatosActualizarEstadoCotizacion, FiltrosCotizacion, ResumenCotizaciones,
-  Testimonio, DatosEnviarTestimonio, DatosCrearTestimonio,
-  DatosActualizarTestimonio, DatosModeracion, FiltrosTestimonio, ResumenTestimonios,
-  DatosChatMensaje, RespuestaChat, RespuestaPropuesta, RespuestaAnalisis,
-  DatosGenerarDescripcion, RespuestaDescripcion,
+  RespuestaApi,
+  RespuestaPaginada,
+  RespuestaAuth,
+  UsuarioConConteo,
+  DatosActualizarPerfil,
+  DatosCambiarContrasena,
+  DatosCrearUsuario,
+  DatosActualizarUsuario,
+  FiltrosUsuario,
+  ResumenUsuarios,
+  Usuario,
+  Servicio,
+  DatosCrearServicio,
+  DatosActualizarServicio,
+  FiltrosServicio,
+  Prospecto,
+  DatosCrearProspecto,
+  DatosActualizarProspecto,
+  DatosActualizarEstadoProspecto,
+  FiltrosProspecto,
+  ResumenProspectos,
+  Proyecto,
+  DatosCrearProyecto,
+  DatosActualizarProyecto,
+  FiltrosProyecto,
+  TecnologiaConteo,
+  Cotizacion,
+  DatosCrearCotizacion,
+  DatosActualizarCotizacion,
+  DatosActualizarEstadoCotizacion,
+  FiltrosCotizacion,
+  ResumenCotizaciones,
+  Testimonio,
+  DatosEnviarTestimonio,
+  DatosCrearTestimonio,
+  DatosActualizarTestimonio,
+  DatosModeracion,
+  FiltrosTestimonio,
+  ResumenTestimonios,
+  DatosChatMensaje,
+  RespuestaChat,
+  RespuestaPropuesta,
+  RespuestaAnalisis,
+  DatosGenerarDescripcion,
+  RespuestaDescripcion,
 } from '@/types'
 
 export const autenticacionServicio = {
@@ -30,7 +60,7 @@ export const autenticacionServicio = {
   refrescar: (tokenRefresco: string) =>
     api.post<RespuestaApi<{ tokenAcceso: string }>>('/autenticacion/refrescar', { tokenRefresco }),
 
-  olvidéContrasena: (correo: string) =>
+  olvidarContrasena: (correo: string) =>
     api.post<RespuestaApi<{ mensaje: string }>>('/autenticacion/olvide-contrasena', { correo }),
 
   resetContrasena: (datos: { token: string; contrasena: string }) =>
@@ -161,11 +191,9 @@ export const proyectosServicio = {
   subirImagen: (id: string, archivo: File) => {
     const formData = new FormData()
     formData.append('imagen', archivo)
-    return api.post<RespuestaApi<Proyecto>>(
-      `/imagenes/proyectos/${id}`,
-      formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
-    )
+    return api.post<RespuestaApi<Proyecto>>(`/imagenes/proyectos/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
   },
 
   eliminarImagen: (id: string) =>
@@ -200,7 +228,6 @@ export const cotizacionesServicio = {
   eliminar: (id: string) =>
     api.delete<RespuestaApi<Cotizacion>>(`/cotizaciones/${id}`),
 
-  // ── Rutas de cliente ────────────────────────────────────────────
   misCotizaciones: () =>
     api.get<RespuestaApi<Cotizacion[]>>('/cotizaciones/mis-cotizaciones'),
 

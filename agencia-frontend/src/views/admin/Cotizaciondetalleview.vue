@@ -1,18 +1,16 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUiStore } from '@/stores/ui'
 import { cotizacionesServicio } from '@/services/servicios'
-import AppInsignia from '@/components/ui/AppInsignia.vue'
-import AppBoton   from '@/components/ui/AppBoton.vue'
-import AppModal   from '@/components/ui/AppModal.vue'
+import AppBoton from '@/components/ui/AppBoton.vue'
+import AppModal from '@/components/ui/AppModal.vue'
 import type { Cotizacion, EstadoCotizacion } from '@/types'
 
 const route   = useRoute()
 const router  = useRouter()
 const uiStore = useUiStore()
 
-// ─── Estado ───────────────────────────────────────────────────────────────────
 const cotizacion  = ref<Cotizacion | null>(null)
 const cargando    = ref(true)
 const modalEstado = ref(false)
@@ -23,7 +21,6 @@ const formularioEstado = ref<{ estado: EstadoCotizacion; notas: string | null }>
   notas:  null,
 })
 
-// ─── Constantes ───────────────────────────────────────────────────────────────
 const ESTADOS: EstadoCotizacion[] = ['PENDIENTE', 'ENVIADA', 'ACEPTADA', 'RECHAZADA']
 
 const CONFIG_ESTADO: Record<EstadoCotizacion, {
@@ -63,7 +60,6 @@ const CONFIG_ESTADO: Record<EstadoCotizacion, {
   },
 }
 
-// ─── Métodos ─────────────────────────────────────────────────────────────────
 const formatearMoneda = (m: number) =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(m)
 
@@ -72,6 +68,12 @@ const formatearFecha = (f: string) =>
     day: '2-digit', month: 'long', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   }).format(new Date(f))
+
+const inicialProspecto = computed(() =>
+  cotizacion.value?.prospecto.nombre?.[0]?.toUpperCase() ?? '?'
+)
+
+const extras = computed(() => cotizacion.value?.extras as string[] ?? [])
 
 const cargar = async () => {
   cargando.value = true
@@ -101,7 +103,7 @@ const guardarEstado = async () => {
     await cotizacionesServicio.actualizarEstado(cotizacion.value.id, formularioEstado.value)
     uiStore.exito('Estado actualizado')
     modalEstado.value = false
-    cargar()
+    await cargar()
   } catch {
     uiStore.error('Error', 'No se pudo actualizar')
   } finally {
@@ -117,7 +119,7 @@ const cambioRapidoEstado = async (nuevoEstado: EstadoCotizacion) => {
       notas:  cotizacion.value.notas,
     })
     uiStore.exito(`Cotización marcada como ${CONFIG_ESTADO[nuevoEstado].etiqueta}`)
-    cargar()
+    await cargar()
   } catch {
     uiStore.error('Error', 'No se pudo actualizar')
   }
@@ -141,16 +143,17 @@ const eliminar = async () => {
     await cotizacionesServicio.eliminar(cotizacion.value.id)
     uiStore.exito('Cotización eliminada')
     router.push({ name: 'admin-cotizaciones' })
-  } catch (e: any) {
-    uiStore.error('Error', e?.response?.data?.mensaje ?? 'No se pudo eliminar')
+  } catch (err: unknown) {
+    const mensaje = err && typeof err === 'object' && 'response' in err
+      ? (err as { response?: { data?: { mensaje?: string } } }).response?.data?.mensaje
+      : undefined
+    uiStore.error('Error', mensaje ?? 'No se pudo eliminar')
   }
 }
 </script>
 
 <template>
   <div class="max-w-5xl mx-auto space-y-6">
-
-    <!-- ── Breadcrumb ─────────────────────────────────────────────────────── -->
     <div class="flex items-center gap-2 text-sm">
       <RouterLink
         :to="{ name: 'admin-cotizaciones' }"
@@ -165,7 +168,6 @@ const eliminar = async () => {
       <span class="text-slate-400">Detalle</span>
     </div>
 
-    <!-- ── Skeleton ───────────────────────────────────────────────────────── -->
     <div v-if="cargando" class="space-y-4">
       <div class="h-32 bg-white/5 rounded-2xl animate-pulse" />
       <div class="grid grid-cols-3 gap-4">
@@ -175,27 +177,23 @@ const eliminar = async () => {
     </div>
 
     <template v-else-if="cotizacion">
-
-      <!-- ── Hero card ──────────────────────────────────────────────────── -->
       <div class="relative bg-[#13151f] border border-white/5 rounded-2xl p-6 overflow-hidden">
-        <!-- Fondo decorativo sutil -->
         <div
           class="absolute inset-0 opacity-30 pointer-events-none"
           :class="{
-            'bg-[radial-gradient(ellipse_at_top_right,rgba(245,158,11,0.08),transparent_60%)]': cotizacion.estado === 'PENDIENTE',
-            'bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.08),transparent_60%)]': cotizacion.estado === 'ENVIADA',
-            'bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.08),transparent_60%)]': cotizacion.estado === 'ACEPTADA',
-            'bg-[radial-gradient(ellipse_at_top_right,rgba(239,68,68,0.08),transparent_60%)]':  cotizacion.estado === 'RECHAZADA',
+            'bg-[radial-gradient(ellipse_at_top_right,rgba(245,158,11,0.08),transparent_60%)]':  cotizacion.estado === 'PENDIENTE',
+            'bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.08),transparent_60%)]':  cotizacion.estado === 'ENVIADA',
+            'bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.08),transparent_60%)]':  cotizacion.estado === 'ACEPTADA',
+            'bg-[radial-gradient(ellipse_at_top_right,rgba(239,68,68,0.08),transparent_60%)]':   cotizacion.estado === 'RECHAZADA',
           }"
         />
 
         <div class="relative flex flex-col sm:flex-row sm:items-start justify-between gap-5">
           <div class="space-y-3">
-            <!-- Estado actual -->
             <div class="flex items-center gap-3">
               <div
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold"
-                :class="CONFIG_ESTADO[cotizacion.estado].bg + ' ' + CONFIG_ESTADO[cotizacion.estado].color"
+                :class="`${CONFIG_ESTADO[cotizacion.estado].bg} ${CONFIG_ESTADO[cotizacion.estado].color}`"
               >
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="CONFIG_ESTADO[cotizacion.estado].icono" />
@@ -205,7 +203,6 @@ const eliminar = async () => {
               <span class="text-xs text-slate-500">{{ formatearFecha(cotizacion.creadoEn) }}</span>
             </div>
 
-            <!-- Monto -->
             <div>
               <p class="text-4xl font-black text-white tracking-tight tabular-nums">
                 {{ formatearMoneda(cotizacion.precioTotal) }}
@@ -214,7 +211,6 @@ const eliminar = async () => {
             </div>
           </div>
 
-          <!-- Acciones -->
           <div class="flex flex-wrap items-center gap-2">
             <button
               class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/8 border border-white/8 hover:border-white/15 text-slate-300 hover:text-white text-sm font-medium transition-all"
@@ -225,6 +221,7 @@ const eliminar = async () => {
               </svg>
               Cambiar estado
             </button>
+
             <button
               class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-blue-500/10 border border-white/8 hover:border-blue-500/20 text-slate-300 hover:text-blue-300 text-sm font-medium transition-all"
               @click="duplicar"
@@ -234,6 +231,7 @@ const eliminar = async () => {
               </svg>
               Duplicar
             </button>
+
             <button
               class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 text-red-400 hover:text-red-300 text-sm font-medium transition-all"
               @click="eliminar"
@@ -247,19 +245,14 @@ const eliminar = async () => {
         </div>
       </div>
 
-      <!-- ── Grid principal ─────────────────────────────────────────────── -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-        <!-- Columna izquierda (2/3) -->
         <div class="lg:col-span-2 space-y-5">
-
-          <!-- Prospecto -->
           <div class="bg-[#13151f] border border-white/5 rounded-2xl p-5">
             <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Prospecto</p>
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <div class="w-11 h-11 rounded-xl bg-violet-500/15 flex items-center justify-center text-base font-black text-violet-300">
-                  {{ cotizacion.prospecto.nombre?.[0]?.toUpperCase() ?? '?' }}
+                  {{ inicialProspecto }}
                 </div>
                 <div>
                   <p class="font-semibold text-white">{{ cotizacion.prospecto.nombre }}</p>
@@ -281,10 +274,8 @@ const eliminar = async () => {
             </div>
           </div>
 
-          <!-- Servicio y precio -->
           <div class="bg-[#13151f] border border-white/5 rounded-2xl p-5">
             <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Detalle del servicio</p>
-
             <div class="flex items-center justify-between p-4 rounded-xl bg-white/3 border border-white/5 mb-4">
               <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-lg bg-indigo-500/15 flex items-center justify-center">
@@ -300,12 +291,11 @@ const eliminar = async () => {
               <p class="text-lg font-black text-white tabular-nums">{{ formatearMoneda(cotizacion.precioTotal) }}</p>
             </div>
 
-            <!-- Extras -->
-            <div v-if="(cotizacion.extras as string[]).length" class="space-y-2">
-              <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Extras incluidos</p>
+            <template v-if="extras.length">
+              <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Extras incluidos</p>
               <ul class="space-y-2">
                 <li
-                  v-for="extra in (cotizacion.extras as string[])"
+                  v-for="extra in extras"
                   :key="extra"
                   class="flex items-center gap-2.5 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10 text-sm text-slate-300"
                 >
@@ -315,11 +305,10 @@ const eliminar = async () => {
                   {{ extra }}
                 </li>
               </ul>
-            </div>
-            <div v-else class="text-xs text-slate-600 italic">Sin extras adicionales</div>
+            </template>
+            <p v-else class="text-xs text-slate-600 italic">Sin extras adicionales</p>
           </div>
 
-          <!-- Notas -->
           <div v-if="cotizacion.notas" class="bg-[#13151f] border border-amber-500/15 rounded-2xl p-5">
             <div class="flex items-center gap-2 mb-3">
               <div class="w-6 h-6 rounded-md bg-amber-500/15 flex items-center justify-center">
@@ -333,27 +322,21 @@ const eliminar = async () => {
           </div>
         </div>
 
-        <!-- Columna derecha (1/3) -->
         <div class="space-y-5">
-
-          <!-- Flujo de estado -->
           <div class="bg-[#13151f] border border-white/5 rounded-2xl p-5">
             <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Flujo del proceso</p>
             <div class="relative">
-              <!-- Línea vertical -->
               <div class="absolute left-4.5 top-6 bottom-6 w-px bg-white/8" />
-
               <div class="space-y-3">
                 <button
                   v-for="estado in ESTADOS"
                   :key="estado"
                   class="relative w-full flex items-center gap-3 p-2.5 rounded-xl text-sm transition-all"
                   :class="cotizacion.estado === estado
-                    ? CONFIG_ESTADO[estado].bg + ' ' + CONFIG_ESTADO[estado].color + ' border font-semibold'
+                    ? `${CONFIG_ESTADO[estado].bg} ${CONFIG_ESTADO[estado].color} border font-semibold`
                     : 'text-slate-500 hover:text-white hover:bg-white/5'"
                   @click="cambioRapidoEstado(estado)"
                 >
-                  <!-- Círculo indicador -->
                   <div
                     class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 transition-all z-10"
                     :class="cotizacion.estado === estado
@@ -380,12 +363,11 @@ const eliminar = async () => {
             </div>
           </div>
 
-          <!-- Asignado a -->
           <div class="bg-[#13151f] border border-white/5 rounded-2xl p-5">
             <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Creada por</p>
             <div v-if="cotizacion.usuario" class="flex items-center gap-3">
               <div class="w-9 h-9 rounded-lg bg-violet-500/15 flex items-center justify-center text-xs font-black text-violet-300">
-                {{ cotizacion.usuario?.nombre?.[0]?.toUpperCase() ?? '?' }}
+                {{ cotizacion.usuario.nombre?.[0]?.toUpperCase() ?? '?' }}
               </div>
               <div>
                 <p class="text-sm font-medium text-white">{{ cotizacion.usuario.nombre }}</p>
@@ -400,7 +382,6 @@ const eliminar = async () => {
             </div>
           </div>
 
-          <!-- Metadatos -->
           <div class="bg-[#13151f] border border-white/5 rounded-2xl p-5 space-y-3">
             <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Información</p>
             <div class="space-y-2.5 text-sm">
@@ -424,14 +405,11 @@ const eliminar = async () => {
       </div>
     </template>
 
-    <!-- ── Modal: Cambiar estado ──────────────────────────────────────────── -->
     <AppModal :abierto="modalEstado" titulo="Actualizar estado" tamano="sm" @cerrar="modalEstado = false">
       <div class="space-y-5">
-
-        <!-- Preview cotización -->
         <div v-if="cotizacion" class="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/5">
           <div class="w-10 h-10 rounded-xl bg-violet-500/15 flex items-center justify-center text-sm font-black text-violet-300 shrink-0">
-            {{ cotizacion.prospecto.nombre?.[0]?.toUpperCase() }}
+            {{ inicialProspecto }}
           </div>
           <div class="flex-1 min-w-0">
             <p class="font-semibold text-white truncate">{{ cotizacion.prospecto.nombre }}</p>
@@ -439,7 +417,6 @@ const eliminar = async () => {
           </div>
         </div>
 
-        <!-- Selector de estado -->
         <div class="space-y-2">
           <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Nuevo estado</label>
           <div class="grid grid-cols-2 gap-2">
@@ -448,7 +425,7 @@ const eliminar = async () => {
               :key="estado"
               class="flex items-center gap-2 px-3 py-3 rounded-xl border text-sm font-medium transition-all"
               :class="formularioEstado.estado === estado
-                ? CONFIG_ESTADO[estado].bg + ' ' + CONFIG_ESTADO[estado].color + ' border'
+                ? `${CONFIG_ESTADO[estado].bg} ${CONFIG_ESTADO[estado].color} border`
                 : 'bg-white/3 border-white/8 text-slate-400 hover:text-white hover:border-white/15'"
               @click="formularioEstado.estado = estado"
             >
@@ -460,7 +437,6 @@ const eliminar = async () => {
           </div>
         </div>
 
-        <!-- Aviso ENVIADA -->
         <div v-if="formularioEstado.estado === 'ENVIADA'" class="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 flex items-start gap-2">
           <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -468,7 +444,6 @@ const eliminar = async () => {
           Se enviará un correo automático al prospecto con los detalles y el precio de la cotización.
         </div>
 
-        <!-- Notas -->
         <div class="space-y-1.5">
           <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Notas del cambio</label>
           <textarea
@@ -487,6 +462,5 @@ const eliminar = async () => {
         </AppBoton>
       </template>
     </AppModal>
-
   </div>
 </template>

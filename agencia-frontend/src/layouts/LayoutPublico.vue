@@ -1,28 +1,16 @@
+<script setup lang="ts">
+import NavbarPublico from '@/components/layout/NavbarPublico.vue'
+import FooterPublico from '@/components/layout/FooterPublico.vue'
+import ChatWidget    from '@/components/shared/ChatWidget.vue'
+</script>
+
 <template>
-  <div class="layout-publico">
+  <div class="flex flex-col min-h-dvh">
     <NavbarPublico />
-    <main class="main-content">
+    <main class="flex-1">
       <RouterView />
     </main>
     <FooterPublico />
     <ChatWidget />
   </div>
 </template>
-
-<script setup lang="ts">
-import NavbarPublico from '@/components/layout/NavbarPublico.vue'
-import FooterPublico from '@/components/layout/FooterPublico.vue'
-import ChatWidget from '@/components/shared/ChatWidget.vue'
-</script>
-
-<style scoped>
-.layout-publico {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-.main-content {
-  flex: 1;
-}
-</style>

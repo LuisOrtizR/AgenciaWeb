@@ -15,13 +15,18 @@ const busqueda    = ref('')
 const cargar = async () => {
   cargando.value = true
   try {
-    const params: Record<string, unknown> = { pagina: pag.paginaActual.value, porPagina: pag.porPagina.value }
+    const params: Record<string, unknown> = {
+      pagina:    pag.paginaActual.value,
+      porPagina: pag.porPagina.value,
+    }
     if (tecActiva.value) params.tecnologia = tecActiva.value
     if (busqueda.value)  params.busqueda   = busqueda.value
+
     const [rP, rT] = await Promise.all([
       proyectosServicio.listar(params as any),
       tecnologias.value.length ? Promise.resolve(null) : proyectosServicio.tecnologias(),
     ])
+
     proyectos.value = rP.data.datos
     pag.actualizarPaginacion(rP.data.paginacion)
     if (rT) tecnologias.value = rT.data.datos
@@ -29,8 +34,6 @@ const cargar = async () => {
     cargando.value = false
   }
 }
-
-onMounted(cargar)
 
 const filtrarPorTec = (tec: string) => {
   tecActiva.value = tecActiva.value === tec ? '' : tec
@@ -42,11 +45,17 @@ const buscarProyectos = () => {
   pag.reiniciar()
   cargar()
 }
+
+const claseBotonFiltro = (activo: boolean) =>
+  activo
+    ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/25'
+    : 'bg-white/4 text-gray-400 hover:text-white border border-white/6 hover:border-white/12'
+
+onMounted(cargar)
 </script>
 
 <template>
   <div class="min-h-screen bg-[#0a0a0f]">
-
     <div class="relative overflow-hidden pt-32 pb-16 px-6">
       <div class="absolute inset-0 pointer-events-none">
         <div class="absolute top-0 left-1/3 w-96 h-96 bg-violet-600/6 rounded-full blur-[120px]" />
@@ -82,9 +91,7 @@ const buscarProyectos = () => {
         <div v-if="tecnologias.length" class="flex flex-wrap justify-center gap-2 mb-14">
           <button
             class="px-4 py-1.5 rounded-full text-sm font-medium transition-all"
-            :class="tecActiva === ''
-              ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/25'
-              : 'bg-white/4 text-gray-400 hover:text-white border border-white/6 hover:border-white/12'"
+            :class="claseBotonFiltro(tecActiva === '')"
             @click="filtrarPorTec('')"
           >
             Todos
@@ -93,9 +100,7 @@ const buscarProyectos = () => {
             v-for="tec in tecnologias.slice(0, 12)"
             :key="tec.tecnologia"
             class="px-4 py-1.5 rounded-full text-sm font-medium transition-all"
-            :class="tecActiva === tec.tecnologia
-              ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/25'
-              : 'bg-white/4 text-gray-400 hover:text-white border border-white/6 hover:border-white/12'"
+            :class="claseBotonFiltro(tecActiva === tec.tecnologia)"
             @click="filtrarPorTec(tec.tecnologia)"
           >
             {{ tec.tecnologia }}
@@ -145,7 +150,6 @@ const buscarProyectos = () => {
                 </div>
               </div>
             </div>
-
             <div class="p-5">
               <h3 class="font-semibold text-white group-hover:text-violet-300 transition-colors text-base">{{ p.titulo }}</h3>
               <p class="text-gray-500 text-sm mt-1.5 line-clamp-2 leading-relaxed">{{ p.descripcion }}</p>
@@ -154,12 +158,11 @@ const buscarProyectos = () => {
                   v-for="tech in p.stackTecnico.slice(0, 4)"
                   :key="tech"
                   class="px-2.5 py-1 rounded-lg bg-white/4 border border-white/6 text-xs text-gray-500 font-medium"
-                >
-                  {{ tech }}
-                </span>
-                <span v-if="p.stackTecnico.length > 4" class="px-2.5 py-1 rounded-lg bg-white/4 border border-white/6 text-xs text-gray-600">
-                  +{{ p.stackTecnico.length - 4 }}
-                </span>
+                >{{ tech }}</span>
+                <span
+                  v-if="p.stackTecnico.length > 4"
+                  class="px-2.5 py-1 rounded-lg bg-white/4 border border-white/6 text-xs text-gray-600"
+                >+{{ p.stackTecnico.length - 4 }}</span>
               </div>
             </div>
           </RouterLink>
@@ -174,6 +177,7 @@ const buscarProyectos = () => {
             @cambiar="(p) => { pag.irAPagina(p); cargar() }"
           />
         </div>
+
       </div>
     </div>
   </div>

@@ -5,11 +5,11 @@ import SistemaToast from '@/components/ui/SistemaToast.vue'
 </script>
 
 <template>
-  <div class="flex h-screen bg-[#0a0a0f] overflow-hidden">
+  <div class="flex h-dvh bg-(--background) overflow-hidden">
     <SidebarAdmin />
     <div class="flex flex-col flex-1 min-w-0 overflow-hidden">
       <TopbarAdmin />
-      <main class="flex-1 overflow-y-auto bg-[#0a0a0f] p-6 lg:p-8">
+      <main class="flex-1 overflow-y-auto scrollbar-thin p-6 lg:p-8">
         <RouterView />
       </main>
     </div>

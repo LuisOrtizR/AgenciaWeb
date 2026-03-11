@@ -18,11 +18,6 @@ import {
   DatosResetearContrasena,
 } from './autenticacion.tipos.js'
 
-/**
- * Capa de lógica de negocio para autenticación.
- */
-
-// ─── Registrar nuevo usuario ──────────────────────────────────────────────────
 export const registrar = async (datos: DatosRegistro) => {
   const existe = await prisma.usuario.findUnique({
     where: { correo: datos.correo },
@@ -48,7 +43,6 @@ export const registrar = async (datos: DatosRegistro) => {
   return { usuario, tokenAcceso, tokenRefresco }
 }
 
-// ─── Login ────────────────────────────────────────────────────────────────────
 export const login = async (datos: DatosLogin) => {
   const usuario = await prisma.usuario.findUnique({
     where: { correo: datos.correo },
@@ -78,7 +72,6 @@ export const login = async (datos: DatosLogin) => {
   }
 }
 
-// ─── Obtener perfil ───────────────────────────────────────────────────────────
 export const obtenerPerfil = async (usuarioId: string) => {
   const usuario = await prisma.usuario.findUnique({
     where:  { id: usuarioId },
@@ -98,7 +91,6 @@ export const obtenerPerfil = async (usuarioId: string) => {
   return usuario
 }
 
-// ─── Refrescar token ──────────────────────────────────────────────────────────
 export const refrescarToken = async (tokenRefresco: string) => {
   const carga = verificarTokenRefresco(tokenRefresco)
   if (!carga) throw new Error('Token de refresco inválido o expirado')
@@ -120,21 +112,18 @@ export const refrescarToken = async (tokenRefresco: string) => {
   return { tokenAcceso: nuevoToken }
 }
 
-// ─── Solicitar reset de contraseña ────────────────────────────────────────────
 export const solicitarReset = async (datos: DatosSolicitarReset) => {
   const usuario = await prisma.usuario.findUnique({
     where: { correo: datos.correo },
   })
 
-  // Respuesta genérica: no revelar si el correo existe o no
   if (!usuario || !usuario.activo) {
     return { mensaje: 'Si el correo existe, recibirás un enlace en breve.' }
   }
 
-  // Token seguro de 32 bytes → hex (64 chars)
   const token         = crypto.randomBytes(32).toString('hex')
   const tokenHash     = crypto.createHash('sha256').update(token).digest('hex')
-  const expiracion    = new Date(Date.now() + 60 * 60 * 1000) // 1 hora
+  const expiracion    = new Date(Date.now() + 60 * 60 * 1000)
 
   await prisma.usuario.update({
     where: { id: usuario.id },
@@ -155,15 +144,13 @@ export const solicitarReset = async (datos: DatosSolicitarReset) => {
   return { mensaje: 'Si el correo existe, recibirás un enlace en breve.' }
 }
 
-// ─── Resetear contraseña con token ───────────────────────────────────────────
 export const resetearContrasena = async (datos: DatosResetearContrasena) => {
-  // Hashear el token recibido para comparar con el guardado
   const tokenHash = crypto.createHash('sha256').update(datos.token).digest('hex')
 
   const usuario = await prisma.usuario.findFirst({
     where: {
       tokenReset:       tokenHash,
-      tokenResetExpira: { gt: new Date() }, // No expirado
+      tokenResetExpira: { gt: new Date() }, 
     },
   })
 

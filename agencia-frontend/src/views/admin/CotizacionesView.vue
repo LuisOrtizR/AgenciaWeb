@@ -8,80 +8,84 @@ import AppInsignia   from '@/components/ui/AppInsignia.vue'
 import AppBoton      from '@/components/ui/AppBoton.vue'
 import AppModal      from '@/components/ui/AppModal.vue'
 import AppPaginacion from '@/components/ui/AppPaginacion.vue'
-import type { Cotizacion, EstadoCotizacion, Servicio, Prospecto } from '@/types'
+import type { Cotizacion, EstadoCotizacion, Servicio, Prospecto, FiltrosCotizacion } from '@/types'
 
-const uiStore  = useUiStore()
-const router   = useRouter()
-const pag      = usePaginacion(12)
+const uiStore = useUiStore()
+const router  = useRouter()
+const pag     = usePaginacion(12)
 
-// ─── Estado ───────────────────────────────────────────────────────────────────
-const cotizaciones = ref<Cotizacion[]>([])
-const servicios    = ref<Servicio[]>([])
-const prospectos   = ref<Prospecto[]>([])
-const cargando     = ref(true)
+const cotizaciones       = ref<Cotizacion[]>([])
+const servicios          = ref<Servicio[]>([])
+const prospectos         = ref<Prospecto[]>([])
+const cargando           = ref(true)
 const cargandoProspectos = ref(false)
+const cotizSelec         = ref<Cotizacion | null>(null)
+const modalEstado        = ref(false)
+const modalCrear         = ref(false)
+const guardando          = ref(false)
 
-const cotizSelec   = ref<Cotizacion | null>(null)
-const modalEstado  = ref(false)
-const modalCrear   = ref(false)
-const guardando    = ref(false)
-
-// ─── Filtros ──────────────────────────────────────────────────────────────────
 const filtros = reactive({
   busqueda:   '',
   estado:     '' as EstadoCotizacion | '',
   servicioId: '',
 })
 
-// ─── Formulario crear ─────────────────────────────────────────────────────────
 const formCrear = reactive({
   prospectoId: '',
   servicioId:  '',
   precioTotal: 0,
   extras:      [] as string[],
-  notas:       '' as string | null,
+  notas:       null as string | null,
 })
+
 const extraInput = ref('')
 
-// ─── Formulario estado ────────────────────────────────────────────────────────
 const formularioEstado = reactive({
   estado: '' as EstadoCotizacion,
   notas:  null as string | null,
 })
 
-// ─── Constantes ───────────────────────────────────────────────────────────────
-const ESTADOS: { valor: EstadoCotizacion | ''; etiqueta: string; color: string }[] = [
-  { valor: '',           etiqueta: 'Todos',     color: '' },
-  { valor: 'PENDIENTE',  etiqueta: 'Pendiente', color: 'text-amber-400' },
-  { valor: 'ENVIADA',    etiqueta: 'Enviada',   color: 'text-blue-400' },
-  { valor: 'ACEPTADA',   etiqueta: 'Aceptada',  color: 'text-emerald-400' },
-  { valor: 'RECHAZADA',  etiqueta: 'Rechazada', color: 'text-red-400' },
-]
+type ConfigEstado = {
+  etiqueta: string
+  variante: 'advertencia' | 'info' | 'exito' | 'error'
+  color:    string
+  icono:    string
+}
 
-const varianteEstado = (e: EstadoCotizacion) => ({
-  PENDIENTE: 'advertencia',
-  ENVIADA:   'info',
-  ACEPTADA:  'exito',
-  RECHAZADA: 'error',
-} as const)[e]
+const CONFIG_ESTADO: Record<EstadoCotizacion, ConfigEstado> = {
+  PENDIENTE: {
+    etiqueta: 'Pendiente',
+    variante: 'advertencia',
+    color:    'text-amber-400',
+    icono:    'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+  },
+  ENVIADA: {
+    etiqueta: 'Enviada',
+    variante: 'info',
+    color:    'text-blue-400',
+    icono:    'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+  },
+  ACEPTADA: {
+    etiqueta: 'Aceptada',
+    variante: 'exito',
+    color:    'text-emerald-400',
+    icono:    'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+  },
+  RECHAZADA: {
+    etiqueta: 'Rechazada',
+    variante: 'error',
+    color:    'text-red-400',
+    icono:    'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z',
+  },
+}
 
-const etiquetaEstado = (e: EstadoCotizacion) => ({
-  PENDIENTE: 'Pendiente',
-  ENVIADA:   'Enviada',
-  ACEPTADA:  'Aceptada',
-  RECHAZADA: 'Rechazada',
-}[e])
+const ESTADOS_FILTRO = Object.entries(CONFIG_ESTADO).map(([valor, cfg]) => ({
+  valor: valor as EstadoCotizacion,
+  ...cfg,
+}))
 
-const iconoEstado = (e: EstadoCotizacion) => ({
-  PENDIENTE: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
-  ENVIADA:   'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
-  ACEPTADA:  'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
-  RECHAZADA: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z',
-}[e])
-
-// ─── Computed ────────────────────────────────────────────────────────────────
 const resumenEstados = computed(() => {
-  const counts = { PENDIENTE: 0, ENVIADA: 0, ACEPTADA: 0, RECHAZADA: 0 }
+  const counts = { PENDIENTE: 0, ENVIADA: 0, ACEPTADA: 0, RECHAZADA: 0 } as Record<EstadoCotizacion, number>
   cotizaciones.value.forEach(c => counts[c.estado]++)
   return counts
 })
@@ -90,17 +94,25 @@ const servicioSeleccionado = computed(() =>
   servicios.value.find(s => s.id === formCrear.servicioId)
 )
 
-// ─── Métodos ─────────────────────────────────────────────────────────────────
 const formatearMoneda = (m: number) =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(m)
 
 const formatearFecha = (f: string) =>
   new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(f))
 
+function extraerMensajeError(err: unknown): string {
+  if (err && typeof err === 'object' && 'response' in err) {
+    const res = (err as { response?: { data?: { mensaje?: string } } }).response
+    return res?.data?.mensaje ?? 'Error desconocido'
+  }
+  if (err instanceof Error) return err.message
+  return 'Error desconocido'
+}
+
 const cargar = async () => {
   cargando.value = true
   try {
-    const params: Record<string, unknown> = {
+    const params: FiltrosCotizacion = {
       pagina:    pag.paginaActual.value,
       porPagina: pag.porPagina.value,
     }
@@ -109,7 +121,7 @@ const cargar = async () => {
     if (filtros.servicioId) params.servicioId = filtros.servicioId
 
     const [resCotiz, resSvcs] = await Promise.all([
-      cotizacionesServicio.listar(params as any),
+      cotizacionesServicio.listar(params),
       serviciosServicio.listar({ porPagina: 50 }),
     ])
     cotizaciones.value = resCotiz.data.datos
@@ -141,20 +153,28 @@ watch(filtros, () => {
   cargar()
 }, { deep: true })
 
+watch(() => formCrear.servicioId, (id) => {
+  const svc = servicios.value.find(s => s.id === id)
+  if (svc && formCrear.precioTotal === 0) {
+    formCrear.precioTotal = svc.precioDesde
+  }
+})
+
 const cambiarPagina = (pagina: number) => {
   pag.irAPagina(pagina)
   cargar()
 }
 
-// ─── Crear cotización ─────────────────────────────────────────────────────────
 const abrirModalCrear = async () => {
-  formCrear.prospectoId = ''
-  formCrear.servicioId  = ''
-  formCrear.precioTotal = 0
-  formCrear.extras      = []
-  formCrear.notas       = null
-  extraInput.value      = ''
-  modalCrear.value      = true
+  Object.assign(formCrear, {
+    prospectoId: '',
+    servicioId:  '',
+    precioTotal: 0,
+    extras:      [],
+    notas:       null,
+  })
+  extraInput.value = ''
+  modalCrear.value = true
   await cargarProspectos()
 }
 
@@ -184,15 +204,14 @@ const crearCotizacion = async () => {
     })
     uiStore.exito('Cotización creada', 'Se creó correctamente como PENDIENTE')
     modalCrear.value = false
-    cargar()
-  } catch (e: any) {
-    uiStore.error('Error', e?.response?.data?.mensaje ?? 'No se pudo crear la cotización')
+    await cargar()
+  } catch (err) {
+    uiStore.error('Error', extraerMensajeError(err))
   } finally {
     guardando.value = false
   }
 }
 
-// ─── Estado ───────────────────────────────────────────────────────────────────
 const abrirModalEstado = (c: Cotizacion) => {
   cotizSelec.value        = c
   formularioEstado.estado = c.estado
@@ -206,13 +225,12 @@ const guardarEstado = async () => {
     await cotizacionesServicio.actualizarEstado(cotizSelec.value.id, formularioEstado)
     uiStore.exito('Estado actualizado')
     modalEstado.value = false
-    cargar()
+    await cargar()
   } catch {
     uiStore.error('Error', 'No se pudo actualizar el estado')
   }
 }
 
-// ─── Acciones ────────────────────────────────────────────────────────────────
 const verDetalle = (c: Cotizacion) =>
   router.push({ name: 'admin-cotizacion-detalle', params: { id: c.id } })
 
@@ -220,7 +238,7 @@ const duplicar = async (c: Cotizacion) => {
   try {
     await cotizacionesServicio.duplicar(c.id)
     uiStore.exito('Cotización duplicada')
-    cargar()
+    await cargar()
   } catch {
     uiStore.error('Error', 'No se pudo duplicar')
   }
@@ -231,25 +249,15 @@ const eliminar = async (c: Cotizacion) => {
   try {
     await cotizacionesServicio.eliminar(c.id)
     uiStore.exito('Eliminada correctamente')
-    cargar()
+    await cargar()
   } catch {
     uiStore.error('Error', 'No se pudo eliminar')
   }
 }
-
-// Sugerir precio base al seleccionar servicio
-watch(() => formCrear.servicioId, (id) => {
-  const svc = servicios.value.find(s => s.id === id)
-  if (svc && formCrear.precioTotal === 0) {
-    formCrear.precioTotal = svc.precioDesde
-  }
-})
 </script>
 
 <template>
   <div class="space-y-6">
-
-    <!-- ── Encabezado ──────────────────────────────────────────────────────── -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
         <h1 class="text-2xl font-bold text-white tracking-tight">Cotizaciones</h1>
@@ -266,34 +274,29 @@ watch(() => formCrear.servicioId, (id) => {
       </button>
     </div>
 
-    <!-- ── Tarjetas de estado ──────────────────────────────────────────────── -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
       <button
-        v-for="e in ESTADOS.slice(1)"
+        v-for="e in ESTADOS_FILTRO"
         :key="e.valor"
         class="group relative p-4 rounded-2xl border transition-all text-left overflow-hidden"
         :class="filtros.estado === e.valor
           ? 'bg-white/8 border-white/20'
           : 'bg-[#13151f] border-white/5 hover:border-white/10 hover:bg-white/5'"
-        @click="filtros.estado = filtros.estado === e.valor ? '' : e.valor as EstadoCotizacion"
+        @click="filtros.estado = filtros.estado === e.valor ? '' : e.valor"
       >
         <div class="flex items-center justify-between mb-3">
           <svg class="w-4 h-4" :class="e.color" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="iconoEstado(e.valor as EstadoCotizacion)" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="e.icono" />
           </svg>
-          <span
-            v-if="filtros.estado === e.valor"
-            class="text-[10px] font-bold uppercase tracking-wider text-violet-400"
-          >Filtro activo</span>
+          <span v-if="filtros.estado === e.valor" class="text-[10px] font-bold uppercase tracking-wider text-violet-400">
+            Filtro activo
+          </span>
         </div>
-        <p class="text-2xl font-black text-white">
-          {{ resumenEstados[e.valor as EstadoCotizacion] }}
-        </p>
+        <p class="text-2xl font-black text-white">{{ resumenEstados[e.valor] }}</p>
         <p class="text-xs text-slate-500 mt-0.5">{{ e.etiqueta }}</p>
       </button>
     </div>
 
-    <!-- ── Barra de filtros ────────────────────────────────────────────────── -->
     <div class="flex flex-col sm:flex-row gap-3">
       <div class="relative flex-1">
         <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -315,15 +318,11 @@ watch(() => formCrear.servicioId, (id) => {
       </select>
     </div>
 
-    <!-- ── Tabla ───────────────────────────────────────────────────────────── -->
     <div class="bg-[#13151f] border border-white/5 rounded-2xl overflow-hidden">
-
-      <!-- Skeleton -->
       <div v-if="cargando" class="p-6 space-y-3">
         <div v-for="i in 6" :key="i" class="h-16 bg-white/4 rounded-xl animate-pulse" />
       </div>
 
-      <!-- Vacío -->
       <div v-else-if="!cotizaciones.length" class="py-24 text-center">
         <div class="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
           <svg class="w-8 h-8 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -343,7 +342,6 @@ watch(() => formCrear.servicioId, (id) => {
         </button>
       </div>
 
-      <!-- Tabla -->
       <div v-else class="overflow-x-auto">
         <table class="w-full">
           <thead>
@@ -381,11 +379,10 @@ watch(() => formCrear.servicioId, (id) => {
                 <span class="text-sm font-bold text-white tabular-nums">{{ formatearMoneda(c.precioTotal) }}</span>
               </td>
               <td class="px-4 py-4">
-                <button
-                  class="hover:opacity-80 transition-opacity"
-                  @click.stop="abrirModalEstado(c)"
-                >
-                  <AppInsignia :variante="varianteEstado(c.estado)" punto>{{ etiquetaEstado(c.estado) }}</AppInsignia>
+                <button class="hover:opacity-80 transition-opacity" @click.stop="abrirModalEstado(c)">
+                  <AppInsignia :variante="CONFIG_ESTADO[c.estado].variante" punto>
+                    {{ CONFIG_ESTADO[c.estado].etiqueta }}
+                  </AppInsignia>
                 </button>
               </td>
               <td class="px-4 py-4 hidden lg:table-cell">
@@ -394,8 +391,8 @@ watch(() => formCrear.servicioId, (id) => {
               <td class="px-4 py-4" @click.stop>
                 <div class="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
-                    class="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/8 transition-all"
                     title="Ver detalle"
+                    class="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/8 transition-all"
                     @click="verDetalle(c)"
                   >
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -403,8 +400,8 @@ watch(() => formCrear.servicioId, (id) => {
                     </svg>
                   </button>
                   <button
-                    class="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
                     title="Duplicar"
+                    class="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
                     @click="duplicar(c)"
                   >
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -412,8 +409,8 @@ watch(() => formCrear.servicioId, (id) => {
                     </svg>
                   </button>
                   <button
-                    class="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
                     title="Eliminar"
+                    class="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
                     @click="eliminar(c)"
                   >
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -427,7 +424,6 @@ watch(() => formCrear.servicioId, (id) => {
         </table>
       </div>
 
-      <!-- Paginación -->
       <div v-if="pag.totalPaginas.value > 1" class="px-5 py-4 border-t border-white/5">
         <AppPaginacion
           :pagina-actual="pag.paginaActual.value"
@@ -439,11 +435,8 @@ watch(() => formCrear.servicioId, (id) => {
       </div>
     </div>
 
-    <!-- ── Modal: Crear cotización ────────────────────────────────────────── -->
     <AppModal :abierto="modalCrear" titulo="Nueva cotización" tamano="md" @cerrar="modalCrear = false">
       <div class="space-y-5">
-
-        <!-- Prospecto -->
         <div class="space-y-1.5">
           <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Prospecto *</label>
           <div v-if="cargandoProspectos" class="h-10 bg-white/5 rounded-xl animate-pulse" />
@@ -459,7 +452,6 @@ watch(() => formCrear.servicioId, (id) => {
           </select>
         </div>
 
-        <!-- Servicio -->
         <div class="space-y-1.5">
           <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Servicio *</label>
           <select
@@ -471,11 +463,12 @@ watch(() => formCrear.servicioId, (id) => {
           </select>
           <p v-if="servicioSeleccionado" class="text-xs text-slate-500">
             Rango base: {{ formatearMoneda(servicioSeleccionado.precioDesde) }}
-            <template v-if="servicioSeleccionado.precioHasta"> — {{ formatearMoneda(servicioSeleccionado.precioHasta) }}</template>
+            <template v-if="servicioSeleccionado.precioHasta">
+              — {{ formatearMoneda(servicioSeleccionado.precioHasta) }}
+            </template>
           </p>
         </div>
 
-        <!-- Precio -->
         <div class="space-y-1.5">
           <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Precio total (COP) *</label>
           <div class="relative">
@@ -494,7 +487,6 @@ watch(() => formCrear.servicioId, (id) => {
           </p>
         </div>
 
-        <!-- Extras -->
         <div class="space-y-2">
           <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Extras incluidos</label>
           <div class="flex gap-2">
@@ -516,11 +508,11 @@ watch(() => formCrear.servicioId, (id) => {
           </div>
           <div v-if="formCrear.extras.length" class="flex flex-wrap gap-2">
             <span
-              v-for="(e, i) in formCrear.extras"
+              v-for="(extra, i) in formCrear.extras"
               :key="i"
               class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs"
             >
-              {{ e }}
+              {{ extra }}
               <button class="hover:text-red-400 transition-colors" @click="quitarExtra(i)">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
@@ -530,7 +522,6 @@ watch(() => formCrear.servicioId, (id) => {
           </div>
         </div>
 
-        <!-- Notas -->
         <div class="space-y-1.5">
           <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Notas internas</label>
           <textarea
@@ -541,7 +532,6 @@ watch(() => formCrear.servicioId, (id) => {
           />
         </div>
 
-        <!-- Preview precio -->
         <div v-if="formCrear.precioTotal > 0 && formCrear.servicioId" class="p-4 rounded-2xl bg-violet-500/10 border border-violet-500/20">
           <p class="text-xs text-violet-400 font-semibold uppercase tracking-wider mb-1">Resumen</p>
           <p class="text-2xl font-black text-white">{{ formatearMoneda(formCrear.precioTotal) }}</p>
@@ -560,12 +550,11 @@ watch(() => formCrear.servicioId, (id) => {
       </template>
     </AppModal>
 
-    <!-- ── Modal: Cambiar estado ──────────────────────────────────────────── -->
     <AppModal :abierto="modalEstado" titulo="Actualizar estado" tamano="sm" @cerrar="modalEstado = false">
       <div class="space-y-4">
         <div v-if="cotizSelec" class="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
           <div class="w-9 h-9 rounded-lg bg-violet-500/15 flex items-center justify-center text-sm font-bold text-violet-300 shrink-0">
-            {{ cotizSelec.prospecto.nombre?.[0]?.toUpperCase() }}
+            {{ cotizSelec.prospecto.nombre?.[0]?.toUpperCase() ?? '?' }}
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-semibold text-white truncate">{{ cotizSelec.prospecto.nombre }}</p>
@@ -577,23 +566,23 @@ watch(() => formCrear.servicioId, (id) => {
           <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Nuevo estado</label>
           <div class="grid grid-cols-2 gap-2">
             <button
-              v-for="e in ESTADOS.slice(1)"
+              v-for="e in ESTADOS_FILTRO"
               :key="e.valor"
               class="flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all"
               :class="formularioEstado.estado === e.valor
                 ? 'bg-white/10 border-white/20 text-white'
                 : 'bg-white/3 border-white/8 text-slate-400 hover:text-white hover:border-white/15'"
-              @click="formularioEstado.estado = e.valor as EstadoCotizacion"
+              @click="formularioEstado.estado = e.valor"
             >
               <svg class="w-3.5 h-3.5 shrink-0" :class="e.color" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="iconoEstado(e.valor as EstadoCotizacion)" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="e.icono" />
               </svg>
               {{ e.etiqueta }}
             </button>
           </div>
         </div>
 
-        <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300" v-if="formularioEstado.estado === 'ENVIADA'">
+        <div v-if="formularioEstado.estado === 'ENVIADA'" class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300">
           <svg class="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -616,6 +605,5 @@ watch(() => formCrear.servicioId, (id) => {
         <AppBoton variante="primario" @click="guardarEstado">Guardar cambio</AppBoton>
       </template>
     </AppModal>
-
   </div>
 </template>

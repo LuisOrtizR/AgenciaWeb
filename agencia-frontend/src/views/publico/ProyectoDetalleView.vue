@@ -32,30 +32,35 @@ onMounted(async () => {
     </div>
 
     <template v-else-if="proyecto">
-
-      <div class="relative overflow-hidden pt-32 pb-6 px-6">
+      <div class="relative overflow-hidden pt-32 pb-16 px-6">
         <div class="absolute inset-0 pointer-events-none">
           <div class="absolute top-0 left-1/3 w-96 h-72 bg-violet-600/6 rounded-full blur-[100px]" />
         </div>
-        <div class="relative max-w-5xl mx-auto">
 
-          <div class="flex items-center gap-2 text-sm text-gray-500 mb-8">
-            <RouterLink :to="{ name: 'proyectos' }" class="hover:text-white transition-colors">Portafolio</RouterLink>
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="relative max-w-5xl mx-auto">
+          <nav class="flex items-center gap-2 text-sm text-gray-500 mb-8">
+            <RouterLink :to="{ name: 'proyectos' }" class="hover:text-white transition-colors">
+              Portafolio
+            </RouterLink>
+            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
             </svg>
             <span class="text-gray-300 truncate max-w-xs">{{ proyecto.titulo }}</span>
-          </div>
+          </nav>
 
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
 
             <div class="lg:col-span-8 space-y-6">
-
               <div>
-                <div v-if="proyecto.servicio" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-xs font-medium mb-4">
+                <div
+                  v-if="proyecto.servicio"
+                  class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-xs font-medium mb-4"
+                >
                   {{ proyecto.servicio.nombre }}
                 </div>
-                <h1 class="text-4xl sm:text-5xl font-black text-white mb-4 leading-tight">{{ proyecto.titulo }}</h1>
+                <h1 class="text-4xl sm:text-5xl font-black text-white mb-4 leading-tight">
+                  {{ proyecto.titulo }}
+                </h1>
                 <p class="text-gray-400 text-lg leading-relaxed">{{ proyecto.descripcion }}</p>
               </div>
 
@@ -74,7 +79,7 @@ onMounted(async () => {
               </div>
 
               <div class="p-6 rounded-2xl bg-[#111118] border border-white/6">
-                <h3 class="text-white font-semibold text-sm mb-4 uppercase tracking-wide">Stack tecnológico</h3>
+                <h3 class="text-white font-semibold text-xs uppercase tracking-widest mb-4">Stack tecnológico</h3>
                 <div class="flex flex-wrap gap-2">
                   <span
                     v-for="tech in proyecto.stackTecnico"
@@ -93,8 +98,8 @@ onMounted(async () => {
                   :key="t.id"
                   class="p-6 rounded-2xl bg-[#111118] border border-white/6 relative overflow-hidden"
                 >
-                  <div class="absolute top-4 right-5 text-5xl text-violet-500/10 font-serif leading-none select-none">"</div>
-                  <div class="flex items-center gap-1 mb-3">
+                  <span class="absolute top-4 right-5 text-5xl text-violet-500/10 font-serif leading-none select-none">"</span>
+                  <div class="flex items-center gap-0.5 mb-3">
                     <span v-for="n in 5" :key="n" class="text-sm" :class="n <= t.calificacion ? 'text-yellow-400' : 'text-white/10'">★</span>
                   </div>
                   <p class="text-gray-300 leading-relaxed italic mb-4">"{{ t.contenido }}"</p>
@@ -106,13 +111,10 @@ onMounted(async () => {
                   </div>
                 </div>
               </div>
-
             </div>
 
-            <div class="lg:col-span-4 space-y-4">
-
+            <div class="lg:col-span-4">
               <div class="sticky top-24 space-y-4">
-
                 <div class="p-5 rounded-2xl bg-[#111118] border border-white/6 space-y-3">
                   <a
                     v-if="proyecto.urlEnVivo"
@@ -149,15 +151,16 @@ onMounted(async () => {
                 </RouterLink>
 
                 <div v-if="proyecto.servicio" class="p-5 rounded-2xl bg-[#111118] border border-white/6">
-                  <p class="text-xs text-gray-600 uppercase tracking-wide font-semibold mb-1">Categoría</p>
+                  <p class="text-xs text-gray-600 uppercase tracking-widest font-semibold mb-1">Categoría</p>
                   <p class="text-white font-medium text-sm">{{ proyecto.servicio.nombre }}</p>
                 </div>
-
               </div>
             </div>
+
           </div>
         </div>
       </div>
     </template>
+
   </div>
 </template>
